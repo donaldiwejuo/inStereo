@@ -14,13 +14,8 @@ import { useMembers } from "../../context/MembersContext";
 import { notifyCritical } from "../../lib/notifications";
 import { getSafetyFeed, SafetyItem, Severity } from "../../lib/safety";
 
-const AVATAR_COLORS = [
-  "#2d3a5a",
-  "#2d4a3e",
-  "#3a2d4a",
-  "#4a3a2d",
-  "#2d4a4a",
-];
+import { cardTints, colors, fonts } from "../../theme";
+const AVATAR_COLORS = cardTints;
 
 function getAvatarColor(id: number) {
   return AVATAR_COLORS[id % AVATAR_COLORS.length];
@@ -61,12 +56,12 @@ export default function NewsScreen() {
     return () => { cancelled = true; clearInterval(t); };
   }, [active, members[active]?.id, members[active]?.city]);
 
-  const cardBorderColor = (severity: Severity) => (severity === "urgent" ? "#ef4444" : "#f59e0b");
-  const titleColor = (severity: Severity) => (severity === "urgent" ? "#fca5a5" : "#fde68a");
+  const cardBorderColor = (severity: Severity) => (severity === "urgent" ? colors.danger : colors.warm);
+  const titleColor = (severity: Severity) => (severity === "urgent" ? colors.danger : colors.warm);
 
   return (
     <View style={s.root}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="dark-content" />
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -109,7 +104,7 @@ export default function NewsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {loading && (
-          <ActivityIndicator color="#a78bfa" style={{ marginTop: 40 }} />
+          <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
         )}
         {!loading && news.length === 0 && (
           <Text style={s.empty}>Nothing concerning near {members[active]?.city || "them"} right now ✓</Text>
@@ -141,10 +136,10 @@ export default function NewsScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#07080f" },
+  root: { flex: 1, backgroundColor: colors.background },
   tabs: {
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.06)",
+    borderBottomColor: colors.border,
     flexGrow: 0,
   },
   tab: {
@@ -154,12 +149,12 @@ const s = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.05)",
+    backgroundColor: colors.surface,
   },
   tabActive: {
-    backgroundColor: "rgba(124,106,247,0.25)",
+    backgroundColor: "#E3E8E3",
     borderWidth: 1,
-    borderColor: "rgba(124,106,247,0.4)",
+    borderColor: colors.accent,
   },
   tabAvatar: {
     width: 24,
@@ -170,12 +165,12 @@ const s = StyleSheet.create({
     overflow: "hidden",
   },
   tabAvatarInitial: {
-    color: "white",
-    fontWeight: "700",
+    color: colors.text,
+    fontFamily: fonts.sansBold,
     fontSize: 11,
   },
-  tabName: { fontSize: 13, fontWeight: "600", color: "rgba(255,255,255,0.45)" },
-  tabNameActive: { color: "#c4b5fd" },
+  tabName: { fontSize: 13, fontFamily: fonts.sansSemiBold, color: colors.textMuted },
+  tabNameActive: { color: colors.primary },
   liveBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -183,39 +178,39 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
-  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#ef4444" },
+  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.danger },
   liveText: {
     fontSize: 10,
-    fontWeight: "700",
-    color: "#ef4444",
+    fontFamily: fonts.sansBold,
+    color: colors.danger,
     letterSpacing: 1,
   },
   scroll: { padding: 16, gap: 12 },
   card: {
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: colors.surface,
     borderRadius: 14,
     padding: 14,
     borderLeftWidth: 3,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.06)",
+    borderColor: colors.border,
   },
   section: {
     fontSize: 10,
-    fontWeight: "700",
-    color: "rgba(255,255,255,0.35)",
+    fontFamily: fonts.sansBold,
+    color: colors.textFaint,
     textTransform: "uppercase",
     letterSpacing: 0.8,
     marginBottom: 5,
   },
-  title: { fontSize: 14, fontWeight: "600", lineHeight: 20, marginBottom: 6 },
+  title: { fontSize: 14, fontFamily: fonts.sansSemiBold, lineHeight: 20, marginBottom: 6 },
   meta: { flexDirection: "row", alignItems: "center", gap: 5 },
-  source: { fontSize: 11, fontWeight: "700", color: "#a78bfa" },
-  metaDot: { color: "rgba(255,255,255,0.25)", fontSize: 10 },
-  ago: { fontSize: 11, color: "rgba(255,255,255,0.35)" },
+  source: { fontSize: 11, fontFamily: fonts.sansBold, color: colors.primary },
+  metaDot: { color: colors.textFaint, fontFamily: fonts.sans, fontSize: 10 },
+  ago: { fontFamily: fonts.sans, fontSize: 11, color: colors.textFaint },
   empty: {
     textAlign: "center",
-    color: "rgba(255,255,255,0.3)",
+    color: colors.textFaint,
     marginTop: 60,
-    fontSize: 14,
+    fontFamily: fonts.sans, fontSize: 14,
   },
 });

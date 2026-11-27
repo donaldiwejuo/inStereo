@@ -28,6 +28,7 @@ import {
   toProfileSnapshot,
 } from "../lib/firestore";
 
+import { colors, fonts } from "../theme";
 const RELATIONSHIP_OPTIONS = [
   "Father", "Mother", "Son", "Daughter",
   "Brother", "Sister", "Grandfather", "Grandmother",
@@ -80,7 +81,7 @@ function LabelPicker({
         onPress={save}
         disabled={!selected || saving}
       >
-        {saving ? <ActivityIndicator color="#fff" /> : <Text style={lp.saveTxt}>Save</Text>}
+        {saving ? <ActivityIndicator color={colors.text} /> : <Text style={lp.saveTxt}>Save</Text>}
       </TouchableOpacity>
     </View>
   );
@@ -88,25 +89,25 @@ function LabelPicker({
 
 const lp = StyleSheet.create({
   wrap: {
-    backgroundColor: "rgba(167,139,250,0.08)",
+    backgroundColor: "#E3E8E3",
     borderRadius: 16, padding: 16, marginTop: 10,
-    borderWidth: 1, borderColor: "rgba(167,139,250,0.2)",
+    borderWidth: 1, borderColor: colors.accent,
   },
-  prompt: { color: "#fff", fontSize: 14, fontWeight: "700", marginBottom: 12 },
+  prompt: { color: colors.text, fontSize: 14, fontFamily: fonts.sansBold, marginBottom: 12 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14 },
   chip: {
     paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.07)",
-    borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: colors.surface,
+    borderWidth: 1, borderColor: colors.border,
   },
-  chipActive: { backgroundColor: "#a78bfa", borderColor: "#a78bfa" },
-  chipTxt: { color: "rgba(255,255,255,0.7)", fontSize: 13, fontWeight: "600" },
-  chipTxtActive: { color: "#fff" },
+  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipTxt: { color: colors.text, fontSize: 13, fontFamily: fonts.sansSemiBold },
+  chipTxtActive: { color: colors.onPrimary },
   saveBtn: {
-    backgroundColor: "#a78bfa", borderRadius: 12,
+    backgroundColor: colors.primary, borderRadius: 12,
     paddingVertical: 12, alignItems: "center",
   },
-  saveTxt: { color: "#fff", fontSize: 14, fontWeight: "700" },
+  saveTxt: { color: colors.onPrimary, fontSize: 14, fontFamily: fonts.sansBold },
 });
 
 type ConnWithProfile = { connection: Connection; profile: ProfileSnapshot };
@@ -200,7 +201,7 @@ export default function ConnectionsScreen() {
     <SafeAreaView style={s.root}>
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-          <Ionicons name="chevron-back" size={22} color="#fff" />
+          <Ionicons name="chevron-back" size={22} color={colors.text} />
         </TouchableOpacity>
         <Text style={s.title}>Connections</Text>
         <View style={{ width: 36 }} />
@@ -210,17 +211,17 @@ export default function ConnectionsScreen() {
         {/* Invite button */}
         <TouchableOpacity style={s.inviteBtn} onPress={handleInvite} disabled={inviting} activeOpacity={0.8}>
           {inviting ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.text} />
           ) : (
             <>
               <View style={s.inviteIcon}>
-                <Ionicons name="person-add" size={20} color="#a78bfa" />
+                <Ionicons name="person-add" size={20} color={colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.inviteTxt}>Invite someone</Text>
                 <Text style={s.inviteSub}>Share a link to connect</Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.3)" />
+              <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
             </>
           )}
         </TouchableOpacity>
@@ -283,7 +284,7 @@ export default function ConnectionsScreen() {
                     <Text style={s.cardName}>{profile.name}</Text>
                     <Text style={s.cardSub}>You labeled them: {connection.labels?.[user!.uid]}</Text>
                   </View>
-                  <ActivityIndicator color="#a78bfa" size="small" />
+                  <ActivityIndicator color={colors.primary} size="small" />
                 </View>
               </View>
             ))}
@@ -314,7 +315,7 @@ export default function ConnectionsScreen() {
                       </Text>
                     </View>
                     <View style={s.connectedBadge}>
-                      <Ionicons name="checkmark-circle" size={18} color="#34d399" />
+                      <Ionicons name="checkmark-circle" size={18} color={colors.accent} />
                     </View>
                   </View>
                 </View>
@@ -325,13 +326,13 @@ export default function ConnectionsScreen() {
 
         {!loading && connections.length === 0 && (
           <View style={s.empty}>
-            <Ionicons name="people-outline" size={52} color="rgba(255,255,255,0.15)" />
+            <Ionicons name="people-outline" size={52} color={colors.textFaint} />
             <Text style={s.emptyTxt}>No connections yet</Text>
             <Text style={s.emptySub}>Tap "Invite someone" to send your first invite link.</Text>
           </View>
         )}
 
-        {loading && <ActivityIndicator color="#a78bfa" style={{ marginTop: 40 }} />}
+        {loading && <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />}
       </ScrollView>
 
       <Modal visible={!!inviteUrl} transparent animationType="fade" onRequestClose={() => setInviteUrl(null)}>
@@ -347,7 +348,7 @@ export default function ConnectionsScreen() {
               multiline
             />
             <TouchableOpacity style={s.modalCopyBtn} onPress={copyInviteUrl} activeOpacity={0.8}>
-              <Ionicons name={copied ? "checkmark" : "copy-outline"} size={16} color="#fff" />
+              <Ionicons name={copied ? "checkmark" : "copy-outline"} size={16} color={colors.onPrimary} />
               <Text style={s.modalCopyBtnTxt}>{copied ? "Copied!" : "Copy link"}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.modalDoneBtn} onPress={() => setInviteUrl(null)}>
@@ -361,85 +362,85 @@ export default function ConnectionsScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#07080f" },
+  root: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 16, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.06)",
+    borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   backBtn: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.07)",
+    backgroundColor: colors.surface,
     alignItems: "center", justifyContent: "center",
   },
-  title: { color: "#fff", fontSize: 17, fontWeight: "700" },
+  title: { color: colors.text, fontSize: 17, fontFamily: fonts.sansBold },
   content: { padding: 16, gap: 8, paddingBottom: 60 },
   inviteBtn: {
     flexDirection: "row", alignItems: "center", gap: 14,
-    backgroundColor: "rgba(167,139,250,0.08)",
+    backgroundColor: "#E3E8E3",
     borderRadius: 18, padding: 18,
-    borderWidth: 1, borderColor: "rgba(167,139,250,0.25)",
+    borderWidth: 1, borderColor: colors.accent,
     marginBottom: 8,
   },
   inviteIcon: {
     width: 44, height: 44, borderRadius: 22,
-    backgroundColor: "rgba(167,139,250,0.12)",
+    backgroundColor: "#E3E8E3",
     alignItems: "center", justifyContent: "center",
   },
-  inviteTxt: { color: "#fff", fontSize: 15, fontWeight: "700" },
-  inviteSub: { color: "rgba(255,255,255,0.4)", fontSize: 12, marginTop: 2 },
+  inviteTxt: { color: colors.text, fontSize: 15, fontFamily: fonts.sansBold },
+  inviteSub: { color: colors.textMuted, fontFamily: fonts.sans, fontSize: 12, marginTop: 2 },
   section: { gap: 10, marginTop: 8 },
   sectionLabel: {
-    color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: "700",
+    color: colors.textMuted, fontSize: 11, fontFamily: fonts.sansBold,
     letterSpacing: 0.8, textTransform: "uppercase",
   },
   card: {
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: colors.surface,
     borderRadius: 16, padding: 16,
-    borderWidth: 1, borderColor: "rgba(255,255,255,0.07)",
+    borderWidth: 1, borderColor: colors.border,
   },
   cardTop: { flexDirection: "row", alignItems: "center", gap: 14 },
   avatar: { width: 48, height: 48, borderRadius: 24, overflow: "hidden" },
-  avatarFallback: { backgroundColor: "#2d3a5a", alignItems: "center", justifyContent: "center" },
-  avatarInitial: { color: "#fff", fontSize: 20, fontWeight: "700" },
-  cardName: { color: "#fff", fontSize: 15, fontWeight: "700" },
-  cardSub: { color: "rgba(255,255,255,0.4)", fontSize: 12, marginTop: 2 },
+  avatarFallback: { backgroundColor: colors.border, alignItems: "center", justifyContent: "center" },
+  avatarInitial: { color: colors.text, fontSize: 20, fontFamily: fonts.sansBold },
+  cardName: { color: colors.text, fontSize: 15, fontFamily: fonts.sansBold },
+  cardSub: { color: colors.textMuted, fontFamily: fonts.sans, fontSize: 12, marginTop: 2 },
   newBadge: {
-    backgroundColor: "rgba(167,139,250,0.15)", borderRadius: 8,
+    backgroundColor: "#E3E8E3", borderRadius: 8,
     paddingHorizontal: 8, paddingVertical: 4,
-    borderWidth: 1, borderColor: "rgba(167,139,250,0.3)",
+    borderWidth: 1, borderColor: colors.accent,
   },
-  newBadgeTxt: { color: "#a78bfa", fontSize: 10, fontWeight: "800", letterSpacing: 0.5 },
+  newBadgeTxt: { color: colors.primary, fontSize: 10, fontFamily: fonts.sansBold, letterSpacing: 0.5 },
   connectedBadge: { padding: 4 },
   labelBtn: {
     marginTop: 12, paddingVertical: 12,
-    backgroundColor: "rgba(167,139,250,0.1)",
+    backgroundColor: "#E3E8E3",
     borderRadius: 12, alignItems: "center",
-    borderWidth: 1, borderColor: "rgba(167,139,250,0.2)",
+    borderWidth: 1, borderColor: colors.accent,
   },
-  labelBtnTxt: { color: "#a78bfa", fontSize: 13, fontWeight: "600" },
+  labelBtnTxt: { color: colors.primary, fontSize: 13, fontFamily: fonts.sansSemiBold },
   empty: { alignItems: "center", paddingTop: 60, gap: 12 },
-  emptyTxt: { color: "rgba(255,255,255,0.5)", fontSize: 17, fontWeight: "600" },
-  emptySub: { color: "rgba(255,255,255,0.25)", fontSize: 13, textAlign: "center", lineHeight: 19 },
+  emptyTxt: { color: colors.textMuted, fontSize: 17, fontFamily: fonts.sansSemiBold },
+  emptySub: { color: colors.textFaint, fontFamily: fonts.sans, fontSize: 13, textAlign: "center", lineHeight: 19 },
   modalBackdrop: {
     flex: 1, backgroundColor: "rgba(0,0,0,0.7)",
     alignItems: "center", justifyContent: "center", padding: 24,
   },
   modalCard: {
-    width: "100%", maxWidth: 420, backgroundColor: "#13131c", borderRadius: 20,
-    padding: 22, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", gap: 12,
+    width: "100%", maxWidth: 420, backgroundColor: colors.surface, borderRadius: 20,
+    padding: 22, borderWidth: 1, borderColor: colors.border, gap: 12,
   },
-  modalTitle: { color: "#f0f0f6", fontSize: 17, fontWeight: "700" },
-  modalSub: { color: "rgba(255,255,255,0.4)", fontSize: 13, marginTop: -8 },
+  modalTitle: { color: colors.text, fontSize: 17, fontFamily: fonts.sansBold },
+  modalSub: { color: colors.textMuted, fontFamily: fonts.sans, fontSize: 13, marginTop: -8 },
   modalUrlInput: {
-    backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 12, padding: 12,
-    color: "#a78bfa", fontSize: 13, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: colors.surface, borderRadius: 12, padding: 12,
+    color: colors.primary, fontFamily: fonts.sans, fontSize: 13, borderWidth: 1, borderColor: colors.border,
   },
   modalCopyBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-    backgroundColor: "#a78bfa", borderRadius: 12, paddingVertical: 12,
+    backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 12,
   },
-  modalCopyBtnTxt: { color: "#fff", fontSize: 14, fontWeight: "700" },
+  modalCopyBtnTxt: { color: colors.onPrimary, fontSize: 14, fontFamily: fonts.sansBold },
   modalDoneBtn: { alignItems: "center", paddingVertical: 10 },
-  modalDoneBtnTxt: { color: "rgba(255,255,255,0.4)", fontSize: 14, fontWeight: "600" },
+  modalDoneBtnTxt: { color: colors.textMuted, fontSize: 14, fontFamily: fonts.sansSemiBold },
 });

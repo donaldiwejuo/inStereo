@@ -7,7 +7,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
   FlatList,
   Image,
   Keyboard,
@@ -28,6 +27,9 @@ import { Member } from '../context/MembersContext';
 import { ChatMessage, chatIdFor, deleteMessage, editMessage, labelConnection, sendMessage, setConnectionNickname, watchMessages } from '../lib/firestore';
 import { getSafetyFeed, SafetyItem, Severity } from '../lib/safety';
 import { uploadChatMedia } from '../lib/storage';
+import { colors, fonts, radius, tintFor } from '../theme';
+import { currentWeekDays, WeekBars } from './pulse';
+import { Avatar } from './ui';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -53,12 +55,6 @@ type CalVisibility = 'full' | 'availability' | 'hidden';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const AVATAR_COLORS = ['#2d3a5a', '#2d4a3e', '#3a2d4a', '#4a3a2d', '#2d4a4a'];
-
-function getAvatarColor(id: number) {
-  return AVATAR_COLORS[id % AVATAR_COLORS.length];
-}
-
 const RELATIONSHIPS = [
   'Mother',
   'Father',
@@ -73,47 +69,7 @@ const RELATIONSHIPS = [
   'Other',
 ];
 
-const MOOD_LABELS: Record<number, string> = {
-  1: 'Struggling',
-  2: 'Low',
-  3: 'OK',
-  4: 'Good',
-  5: 'Thriving',
-};
-
-const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function todayStr(): string {
-  return new Date().toISOString().split('T')[0];
-}
-
-function weekStartStr(): string {
-  const d = new Date();
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  return d.toISOString().split('T')[0];
-}
-
-function currentWeekDays(): string[] {
-  const monday = new Date(weekStartStr() + 'T12:00:00');
-  const days: string[] = [];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    days.push(d.toISOString().split('T')[0]);
-  }
-  return days;
-}
-
-function barColor(score: number | undefined): string {
-  if (!score) return 'rgba(255,255,255,0.12)';
-  if (score <= 2) return '#f87171';
-  if (score === 3) return '#fbbf24';
-  return '#34d399';
-}
 
 function timeAgo(dateStr: string): string {
   const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
@@ -123,37 +79,10 @@ function timeAgo(dateStr: string): string {
   return `${Math.round(diff / 86400)}d ago`;
 }
 
-// ─── Avatar ───────────────────────────────────────────────────────────────────
-
-function Avatar({ member, size = 56 }: { member: Member; size?: number }) {
-  const radius = size / 2;
-  const style = {
-    width: size,
-    height: size,
-    borderRadius: radius,
-    overflow: 'hidden' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-  };
-  if (member.photoUri) {
-    return <Image source={{ uri: member.photoUri }} style={style} />;
-  }
-  return (
-    <View style={[style, { backgroundColor: getAvatarColor(member.id) }]}>
-      <Text style={{ color: 'white', fontWeight: '700', fontSize: size * 0.38 }}>
-        {member.name[0]?.toUpperCase() ?? '?'}
-      </Text>
-    </View>
-  );
-}
-
 // ─── NEWS TAB ─────────────────────────────────────────────────────────────────
 
 function newsBorderColor(severity: Severity) {
-  return severity === 'urgent' ? '#ef4444' : '#f59e0b';
-}
-function newsTitleColor(severity: Severity) {
-  return severity === 'urgent' ? '#fca5a5' : '#fde68a';
+  return severity === 'urgent' ? colors.danger : colors.warm;
 }
 
 function NewsTab({ member }: { member: Member }) {
@@ -178,7 +107,7 @@ function NewsTab({ member }: { member: Member }) {
   if (loading) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60 }}>
-        <ActivityIndicator color="#a78bfa" />
+        <ActivityIndicator color={colors.primary} />
       </View>
     );
   }
@@ -192,24 +121,24 @@ function NewsTab({ member }: { member: Member }) {
         Safety alerts and local news near {member.city || 'them'} from the last 3 days.
       </Text>
       {items.length === 0 && (
-        <Text style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 40, fontSize: 14 }}>
+        <Text style={{ color: colors.textMuted, textAlign: 'center', marginTop: 40, fontFamily: fonts.sans, fontSize: 14 }}>
           Nothing concerning near {member.city || 'them'} right now ✓
         </Text>
       )}
       {items.map((item) => (
         <TouchableOpacity
           key={item.id}
-          style={[d.newsCard, { borderColor: newsBorderColor(item.severity), borderWidth: 2 }]}
+          style={[d.newsCard, { borderLeftColor: newsBorderColor(item.severity), borderLeftWidth: 4 }]}
           activeOpacity={0.75}
           onPress={() => Linking.openURL(item.url)}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 2 }}>
             <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: newsBorderColor(item.severity) }} />
-            <Text style={{ fontSize: 9, fontWeight: '800', letterSpacing: 1, color: newsBorderColor(item.severity), textTransform: 'uppercase' }}>
+            <Text style={{ fontSize: 9, fontFamily: fonts.sansBold, letterSpacing: 1, color: newsBorderColor(item.severity), textTransform: 'uppercase' }}>
               {item.severity === 'urgent' ? 'URGENT' : 'HEADS UP'} · {item.category}{item.kind === 'alert' ? ' · OFFICIAL ALERT' : ''}
             </Text>
           </View>
-          <Text style={[d.newsTitle, { color: newsTitleColor(item.severity) }]}>{item.title}</Text>
+          <Text style={d.newsTitle}>{item.title}</Text>
           <Text style={d.newsAgo}>
             {item.source}{item.extraSources > 0 ? ` +${item.extraSources} more` : ''} · {timeAgo(item.publishedAt)}
           </Text>
@@ -233,7 +162,7 @@ function ZoomVideoPlayer({ uri }: { uri: string }) {
 
 // ─── CHAT TAB ─────────────────────────────────────────────────────────────────
 
-function ChatTab({ member }: { member: Member }) {
+export function ChatTab({ member, bottomInset = 0 }: { member: Member; bottomInset?: number }) {
   const { user } = useAuth();
   const chatId = user ? chatIdFor(user.uid, member.uid) : null;
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -366,27 +295,27 @@ function ChatTab({ member }: { member: Member }) {
           </TouchableOpacity>
         ) : null}
         {item.videoUrl ? (
-          <TouchableOpacity onPress={() => setZoomVideo(item.videoUrl!)} style={{ width: 200, height: 140, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-            <Ionicons name="play-circle" size={48} color="rgba(255,255,255,0.85)" />
-            <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 4 }}>Tap to play</Text>
+          <TouchableOpacity onPress={() => setZoomVideo(item.videoUrl!)} style={{ width: 200, height: 140, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+            <Ionicons name="play-circle" size={48} color={colors.onPrimary} />
+            <Text style={{ color: colors.onPrimary, fontFamily: fonts.sans, fontSize: 11, marginTop: 4 }}>Tap to play</Text>
           </TouchableOpacity>
         ) : null}
         {item.audioUrl ? (
           <TouchableOpacity onPress={() => playAudio(item.audioUrl!)} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 }}>
-            <Ionicons name="play-circle" size={28} color="#a78bfa" />
-            <Text style={{ color: '#a78bfa', fontSize: 13, fontWeight: '600' }}>Voice message</Text>
+            <Ionicons name="play-circle" size={28} color={sent ? colors.onPrimary : colors.primary} />
+            <Text style={{ color: sent ? colors.onPrimary : colors.primary, fontSize: 13, fontFamily: fonts.sansSemiBold }}>Voice message</Text>
           </TouchableOpacity>
         ) : null}
         {isEditing ? (
           <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
-            <TextInput style={{ flex: 1, color: '#fff', fontSize: 14, borderBottomWidth: 1, borderBottomColor: '#a78bfa' }} value={editText} onChangeText={setEditText} autoFocus />
-            <TouchableOpacity onPress={saveEdit}><Ionicons name="checkmark" size={18} color="#a78bfa" /></TouchableOpacity>
-            <TouchableOpacity onPress={() => setEditingId(null)}><Ionicons name="close" size={18} color="rgba(255,255,255,0.5)" /></TouchableOpacity>
+            <TextInput style={{ flex: 1, color: colors.text, fontFamily: fonts.sans, fontSize: 14, borderBottomWidth: 1, borderBottomColor: colors.primary }} value={editText} onChangeText={setEditText} autoFocus />
+            <TouchableOpacity onPress={saveEdit}><Ionicons name="checkmark" size={18} color={colors.primary} /></TouchableOpacity>
+            <TouchableOpacity onPress={() => setEditingId(null)}><Ionicons name="close" size={18} color={colors.textMuted} /></TouchableOpacity>
           </View>
         ) : item.text ? (
           <Text style={[d.bubbleText, sent ? d.bubbleTextSent : d.bubbleTextReceived]}>{item.text}</Text>
         ) : null}
-        <Text style={d.bubbleTime}>{item.timestamp?.toDate ? timeAgo(item.timestamp.toDate().toISOString()) : ''}{item.editedAt ? ' · edited' : ''}</Text>
+        <Text style={[d.bubbleTime, sent && { color: 'rgba(255,255,255,0.7)' }]}>{item.timestamp?.toDate ? timeAgo(item.timestamp.toDate().toISOString()) : ''}{item.editedAt ? ' · edited' : ''}</Text>
       </TouchableOpacity>
     );
   }
@@ -396,21 +325,21 @@ function ChatTab({ member }: { member: Member }) {
       <FlatList style={{ flex: 1 }} ref={listRef} data={messages} keyExtractor={(item) => item.id} renderItem={renderMessage}
         contentContainerStyle={{ padding: 16, gap: 8, paddingBottom: 16 }} showsVerticalScrollIndicator={false}
         onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
-        ListEmptyComponent={<Text style={{ color: 'rgba(255,255,255,0.3)', textAlign: 'center', marginTop: 60, fontSize: 14 }}>No messages yet</Text>}
+        ListEmptyComponent={<Text style={{ color: colors.textFaint, textAlign: 'center', marginTop: 60, fontFamily: fonts.sans, fontSize: 14 }}>No messages yet</Text>}
       />
-      <View style={d.inputRow}>
+      <View style={[d.inputRow, { paddingBottom: 12 + (kbHeight ? 0 : bottomInset) }]}>
         <TouchableOpacity onPress={() => pickMedia('image')} style={d.iconBtn} disabled={uploading}>
-          {uploading ? <ActivityIndicator size="small" color="#a78bfa" /> : <Ionicons name="camera-outline" size={22} color="#a78bfa" />}
+          {uploading ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="camera-outline" size={22} color={colors.primary} />}
         </TouchableOpacity>
         <TouchableOpacity onPress={() => pickMedia('video')} style={d.iconBtn} disabled={uploading}>
-          <Ionicons name="videocam-outline" size={22} color="#a78bfa" />
+          <Ionicons name="videocam-outline" size={22} color={colors.primary} />
         </TouchableOpacity>
-        <TouchableOpacity onPress={isRecording ? stopRecording : startRecording} style={[d.iconBtn, isRecording && { backgroundColor: 'rgba(239,68,68,0.2)' }]} disabled={uploading}>
-          <Ionicons name={isRecording ? "stop-circle" : "mic-outline"} size={22} color={isRecording ? "#ef4444" : "#a78bfa"} />
+        <TouchableOpacity onPress={isRecording ? stopRecording : startRecording} style={[d.iconBtn, isRecording && { backgroundColor: "#F3E3E0" }]} disabled={uploading}>
+          <Ionicons name={isRecording ? "stop-circle" : "mic-outline"} size={22} color={isRecording ? colors.danger : colors.primary} />
         </TouchableOpacity>
-        <TextInput style={d.chatInput} value={text} onChangeText={setText} placeholder="Message..." placeholderTextColor="rgba(255,255,255,0.3)" returnKeyType="send" onSubmitEditing={sendText} multiline={false} />
+        <TextInput style={d.chatInput} value={text} onChangeText={setText} placeholder="Message..." placeholderTextColor={colors.textFaint} returnKeyType="send" onSubmitEditing={sendText} multiline={false} />
         <TouchableOpacity onPress={sendText} style={d.sendBtn}>
-          <Ionicons name="send" size={18} color="white" />
+          <Ionicons name="send" size={18} color={colors.onPrimary} />
         </TouchableOpacity>
       </View>
       <Modal visible={!!zoomImage} transparent animationType="fade">
@@ -422,92 +351,11 @@ function ChatTab({ member }: { member: Member }) {
       <Modal visible={!!zoomVideo} transparent animationType="fade" onRequestClose={() => setZoomVideo(null)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', alignItems: 'center' }}>
           {zoomVideo ? <ZoomVideoPlayer uri={zoomVideo} /> : null}
-          <TouchableOpacity onPress={() => setZoomVideo(null)} style={{ position: 'absolute', top: 56, right: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' }}>
-            <Ionicons name="close" size={22} color="white" />
+          <TouchableOpacity onPress={() => setZoomVideo(null)} style={{ position: 'absolute', top: 56, right: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: colors.border, alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="close" size={22} color={colors.onPrimary} />
           </TouchableOpacity>
         </View>
       </Modal>
-    </View>
-  );
-}
-
-// ─── PULSE LINE GRAPH (read-only view for connections) ───────────────────────
-
-function ConnectionLineGraph({ scores }: { scores: Record<string, number> }) {
-  const days = currentWeekDays();
-  const today = todayStr();
-  const W = Dimensions.get('window').width - 96;
-  const LEFT = 26;
-  const RIGHT = 8;
-  const TOP = 10;
-  const BOT = 22;
-  const GRAPH_H = 90;
-  const plotW = W - LEFT - RIGHT;
-  const plotH = GRAPH_H - TOP - BOT;
-
-  const xOf = (i: number) => LEFT + (i / 6) * plotW;
-  const yOf = (score: number) => TOP + ((5 - score) / 4) * plotH;
-
-  const pts = days.map((day, i) => ({
-    day,
-    x: xOf(i),
-    y: scores[day] != null ? yOf(scores[day]) : null,
-    score: scores[day],
-    label: DAY_LABELS[i],
-    isToday: day === today,
-  }));
-
-  return (
-    <View style={{ height: GRAPH_H + 32, position: 'relative' }}>
-      {/* Y-axis title */}
-      <Text style={{ position: 'absolute', left: -18, top: GRAPH_H / 2 - 18, width: 36, textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontSize: 7, fontWeight: '700', letterSpacing: 0.5, transform: [{ rotate: '-90deg' }] }}>
-        MOOD
-      </Text>
-
-      {/* Y-axis grid + labels */}
-      {[5, 4, 3, 2, 1].map((s) => (
-        <View key={s}>
-          <View style={{ position: 'absolute', left: LEFT, top: yOf(s), right: RIGHT, height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.08)' }} />
-          <Text style={{ position: 'absolute', left: 0, top: yOf(s) - 5, width: LEFT - 2, textAlign: 'right', color: 'rgba(255,255,255,0.28)', fontSize: 8, fontWeight: '600' }}>
-            {s}
-          </Text>
-        </View>
-      ))}
-
-      {/* Continuous line across all 7 days */}
-      {pts.map((p, i) => {
-        if (i === 0) return null;
-        const prev = pts[i - 1];
-        const y1 = prev.y ?? yOf(3);
-        const y2 = p.y ?? yOf(3);
-        const dx = p.x - prev.x;
-        const dy = y2 - y1;
-        const len = Math.sqrt(dx * dx + dy * dy);
-        const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-        const bothScored = prev.y !== null && p.y !== null;
-        return (
-          <View key={p.day + '-line'} style={{ position: 'absolute', left: (prev.x + p.x) / 2 - len / 2, top: (y1 + y2) / 2 - 1, width: len, height: bothScored ? 2 : 1, backgroundColor: bothScored ? '#a78bfa' : 'rgba(167,139,250,0.2)', borderRadius: 1, transform: [{ rotate: `${angle}deg` }] }} />
-        );
-      })}
-
-      {/* Points + day labels */}
-      {pts.map((p) => (
-        <View key={p.day}>
-          {p.y != null ? (
-            <View style={{ position: 'absolute', left: p.x - 5, top: p.y - 5, width: 10, height: 10, borderRadius: 5, backgroundColor: barColor(p.score), borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.5)' }} />
-          ) : (
-            <View style={{ position: 'absolute', left: p.x - 4, top: yOf(3) - 4, width: 8, height: 8, borderRadius: 4, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.2)', backgroundColor: 'transparent' }} />
-          )}
-          <Text style={{ position: 'absolute', left: p.x - 14, top: GRAPH_H - 4, width: 28, textAlign: 'center', color: p.isToday ? '#a78bfa' : 'rgba(255,255,255,0.35)', fontSize: 9, fontWeight: p.isToday ? '700' : '500' }}>
-            {p.label}
-          </Text>
-        </View>
-      ))}
-
-      {/* X-axis title */}
-      <Text style={{ position: 'absolute', left: LEFT, right: RIGHT, top: GRAPH_H + 18, textAlign: 'center', color: 'rgba(255,255,255,0.2)', fontSize: 7, fontWeight: '700', letterSpacing: 0.5 }}>
-        DAY OF WEEK
-      </Text>
     </View>
   );
 }
@@ -533,7 +381,7 @@ function PulseTab({ member }: { member: Member }) {
       <Text style={d.pulseHeader}>{member.name}'s week</Text>
 
       <View style={d.card}>
-        <ConnectionLineGraph scores={memberScores} />
+        <WeekBars scores={memberScores} height={70} />
         <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
           <View style={d.chip}>
             <Text style={d.chipText}>Weekly avg: {avg ?? '—'}</Text>
@@ -547,9 +395,9 @@ function PulseTab({ member }: { member: Member }) {
       <View style={d.card}>
         <Text style={d.sectionLabel}>Notes from {member.name}</Text>
         {notes ? (
-          <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 20 }}>{notes}</Text>
+          <Text style={{ color: colors.text, fontFamily: fonts.sans, fontSize: 14, lineHeight: 20 }}>{notes}</Text>
         ) : (
-          <Text style={{ color: 'rgba(255,255,255,0.25)', fontSize: 14, fontStyle: 'italic' }}>
+          <Text style={{ color: colors.textFaint, fontFamily: fonts.sans, fontSize: 14, fontStyle: 'italic' }}>
             No notes left this week
           </Text>
         )}
@@ -608,7 +456,7 @@ function EditModal({
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#07080f' }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ padding: 24, paddingBottom: 80 }}
@@ -622,7 +470,7 @@ function EditModal({
             value={nickname}
             onChangeText={setNickname}
             placeholder={member.profileName || 'Name'}
-            placeholderTextColor="rgba(255,255,255,0.3)"
+            placeholderTextColor={colors.textFaint}
             returnKeyType="next"
           />
 
@@ -632,7 +480,7 @@ function EditModal({
             value={label}
             onChangeText={setLabel}
             placeholder="e.g. Sister, Mom, Best friend"
-            placeholderTextColor="rgba(255,255,255,0.3)"
+            placeholderTextColor={colors.textFaint}
             returnKeyType="done"
             onSubmitEditing={handleSave}
           />
@@ -655,10 +503,10 @@ function EditModal({
           {/* Actions */}
           <View style={{ flexDirection: 'row', gap: 12, marginTop: 24 }}>
             <TouchableOpacity style={e.cancelBtn} onPress={onClose}>
-              <Text style={{ color: 'rgba(255,255,255,0.6)', fontWeight: '600' }}>Cancel</Text>
+              <Text style={{ color: colors.textMuted, fontFamily: fonts.sansSemiBold }}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[e.saveBtn, saving && { opacity: 0.6 }]} onPress={handleSave} disabled={saving}>
-              <Text style={{ color: 'white', fontWeight: '700' }}>{saving ? 'Saving…' : 'Save'}</Text>
+              <Text style={{ color: colors.onPrimary, fontFamily: fonts.sansBold }}>{saving ? 'Saving…' : 'Save'}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -685,8 +533,8 @@ function ScheduleTab({ member }: { member: Member }) {
   if (visibility === 'hidden') {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 }}>
-        <Ionicons name="lock-closed-outline" size={48} color="rgba(255,255,255,0.15)" />
-        <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 15, textAlign: 'center' }}>
+        <Ionicons name="lock-closed-outline" size={48} color={colors.textFaint} />
+        <Text style={{ color: colors.textMuted, fontFamily: fonts.sans, fontSize: 15, textAlign: 'center' }}>
           Schedule is set to private.
         </Text>
       </View>
@@ -696,8 +544,8 @@ function ScheduleTab({ member }: { member: Member }) {
   if (events.length === 0) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 }}>
-        <Ionicons name="calendar-outline" size={48} color="rgba(255,255,255,0.15)" />
-        <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 15, textAlign: 'center' }}>
+        <Ionicons name="calendar-outline" size={48} color={colors.textFaint} />
+        <Text style={{ color: colors.textMuted, fontFamily: fonts.sans, fontSize: 15, textAlign: 'center' }}>
           No upcoming events in the next 30 days.
         </Text>
       </View>
@@ -717,8 +565,8 @@ function ScheduleTab({ member }: { member: Member }) {
       showsVerticalScrollIndicator={false}
     >
       {visibility === 'availability' && (
-        <View style={{ backgroundColor: 'rgba(167,139,250,0.1)', borderRadius: 10, padding: 10, marginBottom: 4 }}>
-          <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, textAlign: 'center' }}>
+        <View style={{ backgroundColor: "#E3E8E3", borderRadius: 10, padding: 10, marginBottom: 4 }}>
+          <Text style={{ color: colors.textMuted, fontFamily: fonts.sans, fontSize: 12, textAlign: 'center' }}>
             Showing availability only — event details are private
           </Text>
         </View>
@@ -734,9 +582,9 @@ function ScheduleTab({ member }: { member: Member }) {
           <View key={date}>
             <Text
               style={{
-                color: 'rgba(255,255,255,0.5)',
+                color: colors.textMuted,
                 fontSize: 11,
-                fontWeight: '700',
+                fontFamily: fonts.sansBold,
                 letterSpacing: 0.8,
                 marginBottom: 8,
               }}
@@ -749,23 +597,23 @@ function ScheduleTab({ member }: { member: Member }) {
                 style={{
                   flexDirection: 'row',
                   gap: 12,
-                  backgroundColor: 'rgba(255,255,255,0.04)',
+                  backgroundColor: colors.surface,
                   borderRadius: 14,
                   padding: 14,
                   marginBottom: 8,
                   borderLeftWidth: 3,
-                  borderLeftColor: visibility === 'availability' ? 'rgba(255,255,255,0.18)' : ev.color,
+                  borderLeftColor: visibility === 'availability' ? colors.border : ev.color,
                 }}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: '#f0f0f6', fontSize: 15, fontWeight: '700' }}>
+                  <Text style={{ color: colors.text, fontSize: 15, fontFamily: fonts.sansBold }}>
                     {visibility === 'availability' ? 'Busy' : ev.title}
                   </Text>
-                  <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, marginTop: 3 }}>
+                  <Text style={{ color: colors.textMuted, fontFamily: fonts.sans, fontSize: 12, marginTop: 3 }}>
                     {ev.startTime} – {ev.endTime}
                   </Text>
                   {visibility === 'full' && ev.notes ? (
-                    <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12, marginTop: 4 }}>
+                    <Text style={{ color: colors.textFaint, fontFamily: fonts.sans, fontSize: 12, marginTop: 4 }}>
                       {ev.notes}
                     </Text>
                   ) : null}
@@ -798,12 +646,12 @@ export default function PersonDetail({ member, visible, onClose, onDelete }: Pro
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <View style={d.root}>
         {/* Header */}
-        <View style={d.header}>
+        <View style={[d.header, { backgroundColor: tintFor(member.id) }]}>
           <TouchableOpacity onPress={onClose} style={d.backBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Ionicons name="chevron-back" size={26} color="#a78bfa" />
+            <Ionicons name="chevron-back" size={26} color={colors.primary} />
           </TouchableOpacity>
 
-          <Avatar member={member} size={52} />
+          <Avatar person={member} size={52} ring />
 
           <View style={{ flex: 1, marginLeft: 12 }}>
             <Text style={d.headerName} numberOfLines={1}>{member.name}</Text>
@@ -813,10 +661,10 @@ export default function PersonDetail({ member, visible, onClose, onDelete }: Pro
           </View>
 
           <TouchableOpacity onPress={() => setEditVisible(true)} style={d.iconBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="pencil-outline" size={20} color="#a78bfa" />
+            <Ionicons name="pencil-outline" size={20} color={colors.primary} />
           </TouchableOpacity>
           <TouchableOpacity onPress={confirmDelete} style={[d.iconBtn, { marginLeft: 6 }]} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="trash-outline" size={20} color="#f87171" />
+            <Ionicons name="trash-outline" size={20} color={colors.danger} />
           </TouchableOpacity>
         </View>
 
@@ -856,26 +704,24 @@ export default function PersonDetail({ member, visible, onClose, onDelete }: Pro
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const d = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#07080f' },
+  root: { flex: 1, backgroundColor: colors.background },
 
   // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingTop: 56,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.07)',
+    paddingHorizontal: 16,
+    paddingTop: 24,
+    paddingBottom: 20,
   },
   backBtn: { marginRight: 8 },
-  headerName: { fontSize: 18, fontWeight: '700', color: '#f0f0f6' },
-  headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 2 },
+  headerName: { fontSize: 26, fontFamily: fonts.serif, color: colors.text, letterSpacing: -0.5 },
+  headerSub: { fontFamily: fonts.sans, fontSize: 13, color: colors.textMuted, marginTop: 2 },
   iconBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -883,73 +729,77 @@ const d = StyleSheet.create({
   // Tabs
   tabBar: {
     flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.07)',
+    margin: 16,
+    marginBottom: 4,
+    padding: 4,
+    borderRadius: radius.pill,
+    backgroundColor: colors.border,
   },
   tabItem: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 9,
     alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    borderRadius: radius.pill,
   },
   tabItemActive: {
-    borderBottomColor: '#a78bfa',
+    backgroundColor: colors.surface,
   },
   tabText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.4)',
+    fontFamily: fonts.sansMedium,
+    color: colors.textMuted,
   },
   tabTextActive: {
-    color: '#a78bfa',
+    color: colors.text,
+    fontFamily: fonts.sansSemiBold,
   },
 
   // News
   newsCard: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
+    borderColor: colors.border,
     gap: 6,
   },
   newsTitle: {
     fontSize: 14,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.9)',
+    fontFamily: fonts.sansBold,
+    color: colors.text,
     lineHeight: 20,
   },
   newsAgo: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.3)',
+    fontFamily: fonts.sans, fontSize: 11,
+    color: colors.textFaint,
   },
 
   // Chat
   bubble: {
-    maxWidth: '75%',
-    borderRadius: 16,
-    padding: 10,
+    maxWidth: '78%',
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     marginVertical: 2,
     gap: 4,
   },
   bubbleSent: {
     alignSelf: 'flex-end',
-    backgroundColor: '#7c6af7',
+    backgroundColor: colors.primary,
   },
   bubbleReceived: {
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255,255,255,0.09)',
+    backgroundColor: colors.onPrimary,
   },
   bubbleText: {
-    fontSize: 14,
+    fontFamily: fonts.sans, fontSize: 14,
     lineHeight: 19,
   },
-  bubbleTextSent: { color: 'white' },
-  bubbleTextReceived: { color: 'rgba(255,255,255,0.85)' },
+  bubbleTextSent: { color: colors.onPrimary },
+  bubbleTextReceived: { color: colors.text },
   bubbleTime: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.4)',
+    fontFamily: fonts.sans, fontSize: 10,
+    color: colors.textMuted,
     alignSelf: 'flex-end',
   },
   inputRow: {
@@ -958,60 +808,56 @@ const d = StyleSheet.create({
     gap: 8,
     padding: 12,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.07)',
-    backgroundColor: '#07080f',
+    borderTopColor: colors.border,
+    backgroundColor: colors.background,
   },
   chatInput: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: colors.surface,
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    color: '#f0f0f6',
-    fontSize: 14,
+    color: colors.text,
+    fontFamily: fonts.sans, fontSize: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: colors.border,
   },
   sendBtn: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#7c6af7',
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   // Pulse
-  pulseHeader: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#f0f0f6',
-  },
+  pulseHeader: { fontSize: 24, fontFamily: fonts.serif, color: colors.text },
   card: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
+    borderColor: colors.border,
     gap: 14,
   },
   chip: {
-    backgroundColor: 'rgba(167,139,250,0.12)',
+    backgroundColor: "#E3E8E3",
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: 'rgba(167,139,250,0.25)',
+    borderColor: colors.accent,
   },
   chipText: {
-    color: '#a78bfa',
+    color: colors.primary,
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: fonts.sansSemiBold,
   },
   sectionLabel: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#f0f0f6',
+    fontFamily: fonts.sansBold,
+    color: colors.text,
   },
   scoreBtn: {
     flex: 1,
@@ -1019,30 +865,30 @@ const d = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.15)',
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
     gap: 4,
   },
   scoreBtnActive: {
-    backgroundColor: '#a78bfa',
-    borderColor: '#a78bfa',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   scoreNum: {
-    color: 'rgba(255,255,255,0.65)',
+    color: colors.textMuted,
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: fonts.sansBold,
   },
-  scoreNumActive: { color: 'white' },
+  scoreNumActive: { color: colors.text },
   scoreDesc: {
-    color: 'rgba(255,255,255,0.3)',
+    color: colors.textFaint,
     fontSize: 9,
-    fontWeight: '600',
+    fontFamily: fonts.sansSemiBold,
     textAlign: 'center',
   },
-  scoreDescActive: { color: 'rgba(255,255,255,0.9)' },
+  scoreDescActive: { color: colors.text },
   noteInput: {
-    color: '#f0f0f6',
-    fontSize: 14,
+    color: colors.text,
+    fontFamily: fonts.sans, fontSize: 14,
     lineHeight: 20,
     minHeight: 80,
     textAlignVertical: 'top',
@@ -1053,11 +899,11 @@ const d = StyleSheet.create({
 // ─── Edit modal styles ────────────────────────────────────────────────────────
 
 const e = StyleSheet.create({
-  title: { fontSize: 22, fontWeight: '800', color: '#f0f0f6', marginBottom: 24 },
+  title: { fontSize: 30, fontFamily: fonts.serif, color: colors.text, marginBottom: 24, letterSpacing: -0.5 },
   label: {
     fontSize: 11,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.4)',
+    fontFamily: fonts.sansBold,
+    color: colors.textMuted,
     letterSpacing: 1,
     marginBottom: 8,
   },
@@ -1070,60 +916,60 @@ const e = StyleSheet.create({
     overflow: 'hidden',
   },
   uploadBtn: {
-    backgroundColor: 'rgba(124,106,247,0.2)',
+    backgroundColor: "#E3E8E3",
     borderRadius: 12,
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: 'rgba(124,106,247,0.4)',
+    borderColor: colors.accent,
   },
-  uploadText: { color: '#c4b5fd', fontWeight: '600', fontSize: 14 },
+  uploadText: { color: colors.primary, fontFamily: fonts.sansSemiBold, fontSize: 14 },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: colors.border,
     borderRadius: 12,
-    color: '#f0f0f6',
-    fontSize: 15,
+    color: colors.text,
+    fontFamily: fonts.sans, fontSize: 15,
     padding: 13,
     marginBottom: 16,
   },
   dateBtn: {
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 13,
     marginBottom: 16,
   },
-  dateBtnText: { color: '#f0f0f6', fontSize: 15 },
+  dateBtnText: { color: colors.text, fontFamily: fonts.sans, fontSize: 15 },
   relBtn: {
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 20,
     marginRight: 8,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: colors.surface,
   },
   relBtnActive: {
-    backgroundColor: 'rgba(124,106,247,0.25)',
+    backgroundColor: "#E3E8E3",
     borderWidth: 1,
-    borderColor: 'rgba(124,106,247,0.5)',
+    borderColor: colors.accent,
   },
-  relText: { fontSize: 13, color: 'rgba(255,255,255,0.5)', fontWeight: '500' },
-  relTextActive: { color: '#c4b5fd' },
+  relText: { fontSize: 13, color: colors.textMuted, fontFamily: fonts.sansMedium },
+  relTextActive: { color: colors.primary },
   searchBtn: {
-    backgroundColor: 'rgba(124,106,247,0.3)',
+    backgroundColor: colors.primary,
     borderRadius: 12,
     paddingHorizontal: 16,
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(124,106,247,0.4)',
+    borderColor: colors.accent,
   },
   resultsList: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: colors.border,
     marginBottom: 10,
     overflow: 'hidden',
   },
@@ -1131,30 +977,29 @@ const e = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+    borderBottomColor: colors.border,
   },
-  resultText: { color: '#f0f0f6', fontSize: 14, fontWeight: '600' },
-  resultTz: { color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 2 },
+  resultText: { color: colors.text, fontSize: 14, fontFamily: fonts.sansSemiBold },
+  resultTz: { color: colors.textMuted, fontFamily: fonts.sans, fontSize: 11, marginTop: 2 },
   citySelected: {
-    fontSize: 12,
-    color: '#86efac',
-    backgroundColor: 'rgba(34,197,94,0.1)',
-    borderRadius: 8,
-    padding: 8,
+    fontFamily: fonts.sans, fontSize: 12,
+    color: colors.textMuted,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: 12,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(34,197,94,0.2)',
+    lineHeight: 18,
   },
   cancelBtn: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: colors.surface,
     borderRadius: 14,
     padding: 15,
     alignItems: 'center',
   },
   saveBtn: {
     flex: 1,
-    backgroundColor: '#7c6af7',
+    backgroundColor: colors.primary,
     borderRadius: 14,
     padding: 15,
     alignItems: 'center',

@@ -1,249 +1,183 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useFonts, DancingScript_700Bold } from '@expo-google-fonts/dancing-script';
 import { Tabs, useRouter } from "expo-router";
-import { ComponentProps, useEffect, useState } from 'react';
-import {
-  Image,
-  SafeAreaView,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ComponentProps, useEffect, useState } from "react";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 import { UserProfile, watchConnections, watchUserProfile } from "../../lib/firestore";
+import { colors, fonts, radius } from "../../theme";
 
 // expo-router vendors its own BottomTabBarProps type (not publicly exported) that's
 // structurally close to but not identical to @react-navigation/bottom-tabs's own —
 // infer it from the Tabs component itself so the two never drift out of sync.
 type TabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>["tabBar"]>>[0];
 
-function ScrollableTabBar({ state, descriptors, navigation }: TabBarProps) {
+const HIDDEN_TABS = new Set(["news", "moments"]);
+
+// The inStereo mark: three bars, like a sound level — two channels and the
+// sound they make together.
+export function LogoMark({ size = 40 }: { size?: number }) {
+  const bar = { width: size * 0.09, borderRadius: size, backgroundColor: colors.onPrimary };
   return (
-    <View
-      style={{
-        position: "absolute",
-        bottom: 24,
-        left: 20,
-        right: 20,
-        borderRadius: 30,
-        backgroundColor: "rgba(12,12,24,0.95)",
-        shadowColor: "#7c6af7",
-        shadowOpacity: 0.2,
-        shadowRadius: 20,
-        elevation: 10,
-        height: 65,
-        overflow: "hidden",
-      }}
-    >
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{
-          flexGrow: 1,
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-evenly",
-          height: 65,
-        }}
-      >
-        {state.routes.map((route, index) => {
-          const { options } = descriptors[route.key];
-          const HIDDEN = new Set(['news', 'chat', 'moments']);
-          if (HIDDEN.has(route.name)) return null;
-          const isFocused = state.index === index;
-          const label = (options.title ?? route.name) as string;
-          const color = isFocused ? "#a78bfa" : "rgba(255,255,255,0.3)";
-
-          const onPress = () => {
-            const event = navigation.emit({
-              type: "tabPress",
-              target: route.key,
-              canPreventDefault: true,
-            });
-            if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name);
-            }
-          };
-
-          return (
-            <TouchableOpacity
-              key={route.key}
-              onPress={onPress}
-              style={{
-                alignItems: "center",
-                justifyContent: "center",
-                paddingHorizontal: 14,
-                height: 65,
-                gap: 3,
-              }}
-              activeOpacity={0.7}
-            >
-              {options.tabBarIcon?.({ color, size: 22, focused: isFocused })}
-              <Text
-                style={{
-                  color,
-                  fontSize: 10,
-                  fontWeight: "600",
-                  letterSpacing: 0.2,
-                }}
-              >
-                {label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+    <View style={[st.logo, { width: size, height: size, borderRadius: size * 0.28, gap: size * 0.09 }]}>
+      <View style={[bar, { height: size * 0.3 }]} />
+      <View style={[bar, { height: size * 0.5 }]} />
+      <View style={[bar, { height: size * 0.3 }]} />
     </View>
   );
 }
 
-export default function TabLayout() {
+function TabBar({ state, descriptors, navigation }: TabBarProps) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={[st.tabBar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+      {state.routes.map((route, index) => {
+        if (HIDDEN_TABS.has(route.name)) return null;
+        const { options } = descriptors[route.key];
+        const focused = state.index === index;
+        const color = focused ? colors.text : colors.textFaint;
+
+        const onPress = () => {
+          const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
+          if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+        };
+
+        return (
+          <TouchableOpacity
+            key={route.key}
+            onPress={onPress}
+            style={st.tabItem}
+            activeOpacity={0.7}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: focused }}
+          >
+            {options.tabBarIcon?.({ color, size: 23, focused })}
+            <Text style={[st.tabLabel, { color, fontFamily: focused ? fonts.sansSemiBold : fonts.sans }]}>
+              {options.title ?? route.name}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
+function Header() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const [fontsLoaded] = useFonts({ DancingScript_700Bold });
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [requestCount, setRequestCount] = useState(0);
 
   useEffect(() => {
-    if (!user) { setUserProfile(null); return; }
-    return watchUserProfile(user.uid, setUserProfile);
+    if (!user) { setProfile(null); return; }
+    return watchUserProfile(user.uid, setProfile);
   }, [user?.uid]);
 
   useEffect(() => {
     if (!user) { setRequestCount(0); return; }
     return watchConnections(user.uid, (connections) => {
-      const pending = connections.filter(
-        (c) => c.status === "pending_label" && !c.labels?.[user.uid]
-      );
-      setRequestCount(pending.length);
+      setRequestCount(connections.filter((c) => c.status === "pending_label" && !c.labels?.[user.uid]).length);
     });
   }, [user?.uid]);
 
   return (
+    <View style={[st.header, { paddingTop: insets.top + 8 }]}>
+      <View style={st.brand}>
+        <LogoMark />
+        <Text style={st.wordmark}>inStereo</Text>
+      </View>
+
+      <View style={st.headerActions}>
+        <TouchableOpacity onPress={() => router.push("/settings")} accessibilityLabel="Settings and profile">
+          {profile?.photoUrl ? (
+            <Image source={{ uri: profile.photoUrl }} style={st.me} />
+          ) : (
+            <View style={[st.me, st.meEmpty]}>
+              <Ionicons name="person" size={16} color={colors.textMuted} />
+            </View>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => router.push("/connections")}
+          style={st.addBtn}
+          activeOpacity={0.8}
+          accessibilityLabel={requestCount > 0 ? `Add people, ${requestCount} pending requests` : "Add people"}
+        >
+          <Ionicons name="add" size={26} color={colors.onPrimary} />
+          {requestCount > 0 && (
+            <View style={st.badge}>
+              <Text style={st.badgeText}>{requestCount > 9 ? "9+" : requestCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+export default function TabLayout() {
+  return (
     <Tabs
-      tabBar={(props) => <ScrollableTabBar {...props} />}
-      screenOptions={{
-        header: ({ route, options }) => {
-          const title = options.title ?? route.name;
-          return (
-            <SafeAreaView style={{ backgroundColor: "#07080f" }}>
-              <View
-                style={{
-                  paddingTop: 8,
-                  paddingBottom: 12,
-                  paddingHorizontal: 16,
-                  position: "relative",
-                  alignItems: "center",
-                }}
-              >
-                <TouchableOpacity
-                  onPress={() => router.push("/about")}
-                  style={{ position: "absolute", left: 16, top: 8, padding: 6 }}
-                >
-                  <Ionicons name="information-circle-outline" size={22} color="#a78bfa" />
-                </TouchableOpacity>
-                <Text
-                  style={{
-                    color: "#f0f0f6",
-                    fontSize: 32,
-                    fontFamily: fontsLoaded ? 'DancingScript_700Bold' : undefined,
-                    fontWeight: fontsLoaded ? undefined : "800",
-                    letterSpacing: 0,
-                  }}
-                >
-                  inStereo
-                </Text>
-                <Text
-                  style={{
-                    color: "rgba(255,255,255,0.5)",
-                    fontSize: 13,
-                    fontWeight: "600",
-                    marginTop: 2,
-                    letterSpacing: 0.5,
-                  }}
-                >
-                  {title}
-                </Text>
-                <View style={{ position: "absolute", right: 12, top: 8, flexDirection: "row", alignItems: "center", gap: 2 }}>
-                  <TouchableOpacity
-                    onPress={() => router.push("/connections")}
-                    style={{ padding: 6 }}
-                  >
-                    <Ionicons name="mail-unread-outline" size={22} color="#a78bfa" />
-                    {requestCount > 0 && (
-                      <View style={{
-                        position: "absolute", top: 2, right: 2,
-                        minWidth: 16, height: 16, borderRadius: 8, paddingHorizontal: 3,
-                        backgroundColor: "#ef4444", alignItems: "center", justifyContent: "center",
-                      }}>
-                        <Text style={{ color: "#fff", fontSize: 10, fontWeight: "700" }}>
-                          {requestCount > 9 ? "9+" : requestCount}
-                        </Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => router.push('/profile')} style={{ padding: 4 }}>
-                    {userProfile?.photoUrl ? (
-                      <Image source={{ uri: userProfile.photoUrl }} style={{ width: 28, height: 28, borderRadius: 14 }} />
-                    ) : (
-                      <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: "#2d3a5a", alignItems: "center", justifyContent: "center" }}>
-                        <Ionicons name="person" size={14} color="rgba(255,255,255,0.7)" />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => router.push("/settings")}
-                    style={{ padding: 6 }}
-                  >
-                    <Ionicons name="settings-outline" size={22} color="#a78bfa" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </SafeAreaView>
-          );
-        },
-      }}
+      tabBar={(props) => <TabBar {...props} />}
+      screenOptions={{ header: () => <Header />, sceneStyle: { backgroundColor: colors.background } }}
     >
       <Tabs.Screen
         name="index"
-        options={{
-          title: "Home",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
-          ),
-        }}
+        options={{ title: "Home", tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" size={size} color={color} /> }}
       />
       <Tabs.Screen
         name="globe"
-        options={{
-          title: "Globe",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="globe" size={size} color={color} />
-          ),
-        }}
+        options={{ title: "World", tabBarIcon: ({ color, size }) => <Ionicons name="globe-outline" size={size} color={color} /> }}
+      />
+      <Tabs.Screen
+        name="chat"
+        options={{ title: "Chat", tabBarIcon: ({ color, size }) => <Ionicons name="chatbubble-ellipses-outline" size={size} color={color} /> }}
       />
       <Tabs.Screen
         name="calendar"
-        options={{
-          title: "Calendar",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar-outline" size={size} color={color} />
-          ),
-        }}
+        options={{ title: "Calendar", tabBarIcon: ({ color, size }) => <Ionicons name="calendar-outline" size={size} color={color} /> }}
       />
       <Tabs.Screen
         name="connect"
-        options={{
-          title: "Pulse",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="heart-outline" size={size} color={color} />
-          ),
-        }}
+        options={{ title: "Pulse", tabBarIcon: ({ color, size }) => <Ionicons name="pulse-outline" size={size} color={color} /> }}
       />
       <Tabs.Screen name="news" options={{ href: null } as any} />
-      <Tabs.Screen name="chat" options={{ href: null } as any} />
       <Tabs.Screen name="moments" options={{ href: null } as any} />
     </Tabs>
   );
 }
+
+const st = StyleSheet.create({
+  header: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 20, paddingBottom: 12,
+    backgroundColor: colors.background, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
+  },
+  brand: { flexDirection: "row", alignItems: "center", gap: 10 },
+  logo: { backgroundColor: colors.text, flexDirection: "row", alignItems: "center", justifyContent: "center" },
+  wordmark: { fontFamily: fonts.sansBold, fontSize: 22, letterSpacing: -0.6, color: colors.text },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 12 },
+  me: { width: 34, height: 34, borderRadius: 17 },
+  meEmpty: { backgroundColor: colors.border, alignItems: "center", justifyContent: "center" },
+  addBtn: {
+    width: 46, height: 46, borderRadius: 14, backgroundColor: colors.primary,
+    alignItems: "center", justifyContent: "center",
+  },
+  badge: {
+    position: "absolute", top: -5, right: -5, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4,
+    backgroundColor: colors.danger, alignItems: "center", justifyContent: "center",
+    borderWidth: 2, borderColor: colors.background,
+  },
+  badgeText: { color: colors.onPrimary, fontSize: 10, fontFamily: fonts.sansBold },
+  tabBar: {
+    position: "absolute", left: 0, right: 0, bottom: 0,
+    flexDirection: "row", justifyContent: "space-around",
+    paddingTop: 10, backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg,
+    shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 16, shadowOffset: { width: 0, height: -4 }, elevation: 8,
+  },
+  tabItem: { alignItems: "center", gap: 4, flex: 1, paddingVertical: 2 },
+  tabLabel: { fontSize: 12 },
+});

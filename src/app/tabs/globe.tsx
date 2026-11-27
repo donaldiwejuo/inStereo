@@ -1,119 +1,54 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useMemo, useState } from "react";
-import {
-  Dimensions,
-  FlatList,
-  Image,
-  Modal,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { StatusBar } from "expo-status-bar";
+import { useEffect, useMemo, useState } from "react";
+import { FlatList, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import WebView from "react-native-webview";
+import { Avatar, ScreenHeading } from "../../components/ui";
 import { Member, useMembers } from "../../context/MembersContext";
+import { colors, fonts, radius, type } from "../../theme";
+
+const GLOBE_H = 360;
+
+function localTime(tz: string | undefined, now: Date): string {
+  try {
+    return new Intl.DateTimeFormat("en-US", { timeZone: tz || "UTC", hour: "numeric", minute: "2-digit" }).format(now);
+  } catch {
+    return "";
+  }
+}
 
 // ─── Flat-map fallback (used when globe.gl CDN is unreachable) ──────────────
 
-const { width: MAP_W, height: MAP_H } = Dimensions.get("window");
-
-const AVATAR_COLORS = ["#2d3a5a", "#2d4a3e", "#3a2d4a", "#4a3a2d", "#2d4a4a"];
-function getAvatarColor(id: number) {
-  return AVATAR_COLORS[id % AVATAR_COLORS.length];
-}
-
-function latLonToXY(lat: number, lon: number) {
-  const x = ((lon + 180) / 360) * MAP_W;
-  const y = ((90 - lat) / 180) * MAP_H;
-  return { x, y };
-}
-
 type Cluster = { city: string; lat: number; lon: number; members: Member[] };
 
-function Pin({ cluster, onPress }: { cluster: Cluster; onPress: () => void }) {
-  const isMulti = cluster.members.length > 1;
-
-  return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.75} style={s.pinContainer}>
-      <View style={s.pinHead}>
-        {isMulti ? (
-          <Text style={s.pinCount}>{cluster.members.length}</Text>
-        ) : (
-          <Ionicons name="location" size={18} color="white" />
-        )}
-      </View>
-      <View style={s.pinTail} />
-      <Text style={s.pinLabel} numberOfLines={1}>{cluster.city}</Text>
-    </TouchableOpacity>
-  );
-}
-
-function MemberRow({ member }: { member: Member }) {
-  const bg = getAvatarColor(member.id);
-  return (
-    <View style={s.memberRow}>
-      {member.photoUri ? (
-        <Image source={{ uri: member.photoUri }} style={s.memberAvatar} />
-      ) : (
-        <View style={[s.memberAvatar, { backgroundColor: bg }]}>
-          <Text style={s.memberInitial}>{member.name[0].toUpperCase()}</Text>
-        </View>
-      )}
-      <View style={{ flex: 1 }}>
-        <Text style={s.memberName}>{member.name}</Text>
-        <Text style={s.memberRel}>{member.relationship}</Text>
-      </View>
-    </View>
-  );
-}
-
-function FlatMapView({
-  members,
-  onCityPress,
-}: {
-  members: Member[];
-  onCityPress: (city: string, memberIds: number[]) => void;
+function FlatMapView({ members, width, onCityPress }: {
+  members: Member[]; width: number; onCityPress: (city: string, memberIds: number[]) => void;
 }) {
   const clusters = useMemo<Cluster[]>(() => {
     const map: Record<string, Cluster> = {};
     members.forEach((m) => {
-      if (!map[m.city])
-        map[m.city] = { city: m.city, lat: m.lat, lon: m.lon, members: [] };
+      if (!map[m.city]) map[m.city] = { city: m.city, lat: m.lat, lon: m.lon, members: [] };
       map[m.city].members.push(m);
     });
     return Object.values(map);
   }, [members]);
-
-  const gridLats = [-60, -30, 30, 60];
-  const gridLons = [-150, -120, -90, -60, -30, 0, 30, 60, 90, 120, 150];
+  const toXY = (lat: number, lon: number) => ({ x: ((lon + 180) / 360) * width, y: ((90 - lat) / 180) * GLOBE_H });
 
   return (
-    <View style={s.mapArea}>
-      {gridLats.map((lat) => {
-        const { y } = latLonToXY(lat, 0);
-        return <View key={lat} style={[s.gridH, { top: y }]} />;
-      })}
-      {gridLons.map((lon) => {
-        const { x } = latLonToXY(0, lon);
-        return <View key={lon} style={[s.gridV, { left: x }]} />;
-      })}
-      <View style={[s.equator, { top: MAP_H / 2 }]} />
-
-      {clusters.map((cluster) => {
-        const { x, y } = latLonToXY(cluster.lat, cluster.lon);
+    <View style={[s.globe, { width }]}>
+      {[-60, -30, 0, 30, 60].map((lat) => (
+        <View key={lat} style={[s.gridH, { top: toXY(lat, 0).y }]} />
+      ))}
+      {clusters.map((c) => {
+        const { x, y } = toXY(c.lat, c.lon);
         return (
-          <View key={cluster.city} style={[s.pinAnchor, { left: x, top: y }]}>
-            <Pin
-              cluster={cluster}
-              onPress={() =>
-                onCityPress(
-                  cluster.city,
-                  cluster.members.map((m) => m.id)
-                )
-              }
-            />
-          </View>
+          <TouchableOpacity
+            key={c.city}
+            style={[s.flatPin, { left: x - 18, top: y - 18 }]}
+            onPress={() => onCityPress(c.city, c.members.map((m) => m.id))}
+          >
+            <Avatar person={c.members[0]} size={30} ring />
+          </TouchableOpacity>
         );
       })}
     </View>
@@ -129,7 +64,7 @@ const GLOBE_HTML_TEMPLATE = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { background:#07080f; overflow:hidden; }
+  body { background:#E9EEF0; overflow:hidden; }
 </style>
 </head>
 <body>
@@ -155,19 +90,20 @@ function startGlobe() {
     myGlobe
       .width(window.innerWidth)
       .height(window.innerHeight)
-      .backgroundColor('#07080f')
-      .globeImageUrl('https://cdn.jsdelivr.net/npm/three-globe@2/example/img/earth-night.jpg')
+      .backgroundColor('#E9EEF0')
+      .globeImageUrl('https://cdn.jsdelivr.net/npm/three-globe@2/example/img/earth-blue-marble.jpg')
       .showAtmosphere(true)
-      .atmosphereColor('#3a2d8a')
-      .atmosphereAltitude(0.22);
+      .atmosphereColor('#ffffff')
+      .atmosphereAltitude(0.18);
 
     myGlobe.renderer().setPixelRatio(window.devicePixelRatio || 2);
 
     // Cluster by city
     var cityMap = {};
     MEMBERS.forEach(function(m) {
-      if (!cityMap[m.city]) cityMap[m.city] = { lat: m.lat, lng: m.lon, city: m.city, ids: [] };
+      if (!cityMap[m.city]) cityMap[m.city] = { lat: m.lat, lng: m.lon, city: m.city, ids: [], people: [] };
       cityMap[m.city].ids.push(m.id);
+      cityMap[m.city].people.push(m);
     });
     var clusters = Object.values(cityMap);
 
@@ -179,17 +115,32 @@ function startGlobe() {
       .htmlAltitude(0.01)
       .htmlTransitionDuration(0)
       .htmlElement(function(d) {
-        var count = d.ids.length;
-        var pinInner = count > 1
-          ? '<span style="color:rgba(255,255,255,0.95);font-weight:800;font-size:13px;font-family:-apple-system,sans-serif;line-height:1">' + count + '</span>'
-          : '<svg viewBox="0 0 24 24" width="22" height="22" fill="white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>';
+        // Built with DOM APIs (not innerHTML) so names and cities are always
+        // treated as text.
+        var first = d.people[0];
         var wrap = document.createElement('div');
-        wrap.style.cssText = 'position:relative;transform:translate(-50%,-50%);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px';
-        wrap.innerHTML =
-          '<div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#2d1b8a,#7c6af7);border:2.5px solid rgba(167,139,250,0.85);display:flex;align-items:center;justify-content:center;box-shadow:0 0 16px rgba(124,106,247,0.75),0 2px 8px rgba(0,0,0,0.6)">' +
-          pinInner +
-          '</div>' +
-          '<div style="background:rgba(10,8,30,0.75);border-radius:6px;padding:2px 7px;white-space:nowrap;color:rgba(255,255,255,0.95);font-size:10px;font-weight:700;font-family:-apple-system,sans-serif;border:1px solid rgba(124,106,247,0.4)">' + d.city + '</div>';
+        wrap.style.cssText = 'position:relative;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px';
+        var face = document.createElement('div');
+        face.style.cssText = 'position:relative;width:46px;height:46px;border-radius:50%;border:3px solid #fff;background:#DCDDD6;box-shadow:0 4px 12px rgba(35,40,42,0.25);display:flex;align-items:center;justify-content:center;overflow:visible;font:500 18px Georgia,serif;color:#23282A';
+        if (first.photo) {
+          var img = document.createElement('img');
+          img.src = first.photo;
+          img.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover';
+          face.appendChild(img);
+        } else {
+          face.textContent = (first.name || '?').charAt(0).toUpperCase();
+        }
+        if (d.ids.length > 1) {
+          var badge = document.createElement('div');
+          badge.textContent = String(d.ids.length);
+          badge.style.cssText = 'position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;border-radius:9px;background:#3F4B43;color:#fff;font:700 10px -apple-system,sans-serif;display:flex;align-items:center;justify-content:center;border:2px solid #fff';
+          face.appendChild(badge);
+        }
+        var label = document.createElement('div');
+        label.textContent = d.city;
+        label.style.cssText = 'background:rgba(251,251,248,0.95);border-radius:8px;padding:2px 8px;white-space:nowrap;color:#23282A;font:600 10px -apple-system,sans-serif;box-shadow:0 1px 4px rgba(35,40,42,0.15)';
+        wrap.appendChild(face);
+        wrap.appendChild(label);
         return wrap;
       });
 
@@ -225,7 +176,7 @@ function startGlobe() {
 
     var ctrl = myGlobe.controls();
     ctrl.autoRotate = true;
-    ctrl.autoRotateSpeed = 0.5;
+    ctrl.autoRotateSpeed = 0.4;
     ctrl.enableZoom = true;
     ctrl.minDistance = 150;
     ctrl.maxDistance = 600;
@@ -265,96 +216,119 @@ tryLoad(
 
 // ─── Main screen ─────────────────────────────────────────────────────────────
 
-export default function GlobeScreen() {
+export default function WorldScreen() {
   const { members } = useMembers();
   const [useFlatMap, setUseFlatMap] = useState(false);
-  const [selectedCity, setSelectedCity] = useState<{
-    city: string;
-    memberIds: number[];
-  } | null>(null);
+  const [globeWidth, setGlobeWidth] = useState(0);
+  const [now, setNow] = useState(() => new Date());
+  const [selectedCity, setSelectedCity] = useState<{ city: string; memberIds: number[] } | null>(null);
 
-  const cityMembers = selectedCity
-    ? members.filter((m) => selectedCity.memberIds.includes(m.id))
-    : [];
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const cityMembers = selectedCity ? members.filter((m) => selectedCity.memberIds.includes(m.id)) : [];
+  const cityCount = new Set(members.map((m) => m.city)).size;
 
   // Keyed on the pin data itself (not the members array) so the globe only
   // reloads when someone's pin actually moves or is relabeled — not on every
   // snapshot, e.g. a pulse score update, which would reset the user's spin.
   const pinsJson = JSON.stringify(
-    members.map((m) => ({
-      id: m.id,
-      name: m.name,
-      city: m.city,
-      lat: m.lat,
-      lon: m.lon,
-      relationship: m.relationship,
-    }))
-  );
+    members.map((m) => ({ id: m.id, name: m.name, city: m.city, lat: m.lat, lon: m.lon, photo: m.photoUri ?? "" }))
+  ).replace(/</g, "\\u003c"); // keep data from closing the <script> tag
   const html = useMemo(() => GLOBE_HTML_TEMPLATE.replace("__MEMBERS_DATA__", pinsJson), [pinsJson]);
 
   function handleMessage(event: { nativeEvent: { data: string } }) {
     try {
       const msg = JSON.parse(event.nativeEvent.data);
-      if (msg.type === "error") {
-        setUseFlatMap(true);
-      } else if (msg.type === "pin-click") {
-        setSelectedCity({ city: msg.city, memberIds: msg.memberIds });
-      }
-    } catch { }
+      if (msg.type === "error") setUseFlatMap(true);
+      else if (msg.type === "pin-click") setSelectedCity({ city: msg.city, memberIds: msg.memberIds });
+    } catch {}
   }
 
   return (
     <View style={s.root}>
-      <StatusBar barStyle="light-content" />
-
-      {useFlatMap ? (
-        <FlatMapView
-          members={members}
-          onCityPress={(city, memberIds) => setSelectedCity({ city, memberIds })}
+      <StatusBar style="dark" />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+        <ScreenHeading
+          eyebrow="World"
+          title="Where your people are."
+          subtitle={members.length ? `${members.length} ${members.length === 1 ? "person" : "people"} across ${cityCount} ${cityCount === 1 ? "city" : "cities"}.` : undefined}
         />
-      ) : (
-        <WebView
-          source={{ html }}
-          style={{ flex: 1, backgroundColor: "#07080f" }}
-          onMessage={handleMessage}
-          javaScriptEnabled
-          originWhitelist={["*"]}
-          mixedContentMode="always"
-          allowsInlineMediaPlayback
-          mediaPlaybackRequiresUserAction={false}
-          onError={() => setUseFlatMap(true)}
-          onHttpError={() => setUseFlatMap(true)}
-        />
-      )}
 
-      <Modal
-        visible={selectedCity !== null}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setSelectedCity(null)}
-      >
+        <View style={s.body}>
+          <View style={s.globeCard} onLayout={(e) => setGlobeWidth(e.nativeEvent.layout.width)}>
+            {useFlatMap ? (
+              globeWidth > 0 && (
+                <FlatMapView members={members} width={globeWidth} onCityPress={(city, memberIds) => setSelectedCity({ city, memberIds })} />
+              )
+            ) : (
+              <WebView
+                source={{ html }}
+                style={s.globe}
+                onMessage={handleMessage}
+                javaScriptEnabled
+                originWhitelist={["*"]}
+                scrollEnabled={false}
+                allowsInlineMediaPlayback
+                onError={() => setUseFlatMap(true)}
+                onHttpError={() => setUseFlatMap(true)}
+              />
+            )}
+          </View>
+
+          <View style={s.privacy}>
+            <Ionicons name="lock-closed-outline" size={14} color={colors.textMuted} />
+            <Text style={s.privacyText}>City-level only. Exact locations are never shared.</Text>
+          </View>
+
+          <Text style={[type.sectionTitle, { marginTop: 26, marginBottom: 6 }]}>Everyone</Text>
+          {members.map((m) => (
+            <TouchableOpacity
+              key={m.id}
+              style={s.row}
+              onPress={() => setSelectedCity({ city: m.city, memberIds: members.filter((x) => x.city === m.city).map((x) => x.id) })}
+              activeOpacity={0.7}
+            >
+              <Avatar person={m} size={40} />
+              <View style={{ flex: 1 }}>
+                <Text style={s.rowName} numberOfLines={1}>{m.name}</Text>
+                <Text style={type.caption} numberOfLines={1}>{[m.city, m.country].filter(Boolean).join(", ")}</Text>
+              </View>
+              <Text style={s.rowTime}>{localTime(m.timezone, now)}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ScrollView>
+
+      <Modal visible={selectedCity !== null} transparent animationType="slide" onRequestClose={() => setSelectedCity(null)}>
         <View style={s.modalOverlay}>
           <View style={s.modalSheet}>
             <View style={s.modalHeader}>
               <View style={{ flex: 1 }}>
                 <Text style={s.modalCity}>{selectedCity?.city}</Text>
-                <Text style={s.modalSub}>
-                  {cityMembers.length}{" "}
-                  {cityMembers.length === 1 ? "person" : "people"} here
+                <Text style={type.caption}>
+                  {cityMembers.length} {cityMembers.length === 1 ? "person" : "people"} · {localTime(cityMembers[0]?.timezone, now)}
                 </Text>
               </View>
-              <TouchableOpacity
-                style={s.closeBtn}
-                onPress={() => setSelectedCity(null)}
-              >
-                <Ionicons name="close" size={22} color="rgba(255,255,255,0.7)" />
+              <TouchableOpacity style={s.closeBtn} onPress={() => setSelectedCity(null)} accessibilityLabel="Close">
+                <Ionicons name="close" size={20} color={colors.text} />
               </TouchableOpacity>
             </View>
             <FlatList
               data={cityMembers}
               keyExtractor={(item) => String(item.id)}
               contentContainerStyle={{ paddingBottom: 40 }}
-              renderItem={({ item }) => <MemberRow member={item} />}
+              renderItem={({ item }) => (
+                <View style={s.row}>
+                  <Avatar person={item} size={44} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.rowName}>{item.name}</Text>
+                    <Text style={type.caption}>{item.relationship}</Text>
+                  </View>
+                </View>
+              )}
             />
           </View>
         </View>
@@ -364,119 +338,26 @@ export default function GlobeScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#07080f" },
-  mapArea: { flex: 1, backgroundColor: "#07080f" },
-  gridH: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: "rgba(255,255,255,0.08)",
+  root: { flex: 1, backgroundColor: colors.background },
+  body: { paddingHorizontal: 22 },
+  globeCard: { height: GLOBE_H, borderRadius: radius.lg, overflow: "hidden", backgroundColor: "#E9EEF0" },
+  globe: { height: GLOBE_H, backgroundColor: "#E9EEF0" },
+  gridH: { position: "absolute", left: 0, right: 0, height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
+  flatPin: { position: "absolute" },
+  privacy: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 12 },
+  privacyText: { fontFamily: fonts.sans, fontSize: 13, color: colors.textMuted },
+  row: {
+    flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
   },
-  gridV: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    width: StyleSheet.hairlineWidth,
-    backgroundColor: "rgba(255,255,255,0.08)",
-  },
-  equator: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: "rgba(167,139,250,0.3)",
-  },
-  pinAnchor: {
-    position: "absolute",
-    transform: [{ translateX: -17 }, { translateY: -56 }],
-  },
-  pinContainer: { alignItems: "center" },
-  pinHead: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#7c6af7",
-    borderWidth: 2.5,
-    borderColor: "rgba(167,139,250,0.85)",
-    shadowColor: "#7c6af7",
-    shadowOpacity: 0.7,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 6,
-  },
-  pinCount: { color: "white", fontWeight: "800", fontSize: 13 },
-  pinTail: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 7,
-    borderRightWidth: 7,
-    borderTopWidth: 11,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-    borderTopColor: "#7c6af7",
-    marginTop: -1,
-  },
-  pinLabel: {
-    color: "rgba(255,255,255,0.9)",
-    fontSize: 9,
-    fontWeight: "600",
-    textAlign: "center",
-    maxWidth: 80,
-    marginTop: 2,
-    textShadowColor: "rgba(0,0,0,0.9)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
+  rowName: { fontFamily: fonts.sansSemiBold, fontSize: 16, color: colors.text },
+  rowTime: { fontFamily: fonts.serif, fontSize: 20, color: colors.text },
+  modalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(35,40,42,0.35)" },
   modalSheet: {
-    backgroundColor: "#0f1020",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingTop: 20,
-    paddingHorizontal: 20,
-    maxHeight: "70%",
-    borderWidth: 1,
-    borderColor: "rgba(167,139,250,0.2)",
+    backgroundColor: colors.background, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg,
+    paddingTop: 22, paddingHorizontal: 22, maxHeight: "70%",
   },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 20,
-  },
-  modalCity: { color: "#f0f0f6", fontSize: 22, fontWeight: "800" },
-  modalSub: { color: "rgba(255,255,255,0.5)", fontSize: 13, marginTop: 3 },
-  closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  memberRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.06)",
-  },
-  memberAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-  },
-  memberInitial: { color: "white", fontWeight: "700", fontSize: 20 },
-  memberName: { color: "#f0f0f6", fontSize: 16, fontWeight: "700" },
-  memberRel: { color: "rgba(255,255,255,0.45)", fontSize: 13, marginTop: 2 },
+  modalHeader: { flexDirection: "row", alignItems: "flex-start", marginBottom: 12 },
+  modalCity: { fontFamily: fonts.serif, fontSize: 28, color: colors.text },
+  closeBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.border, alignItems: "center", justifyContent: "center" },
 });

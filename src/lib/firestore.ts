@@ -6,6 +6,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit,
   onSnapshot,
   orderBy,
   query,
@@ -392,6 +393,15 @@ export function watchMessages(chatId: string, cb: (messages: ChatMessage[]) => v
   return onSnapshot(q, (snap) => {
     cb(snap.docs.map((d) => ({ id: d.id, ...d.data() } as ChatMessage)));
   });
+}
+
+// Only the newest message, for conversation-list previews.
+export function watchLastMessage(chatId: string, cb: (message: ChatMessage | null) => void) {
+  const q = query(collection(db, "chats", chatId, "messages"), orderBy("timestamp", "desc"), limit(1));
+  return onSnapshot(q, (snap) => {
+    const d = snap.docs[0];
+    cb(d ? ({ id: d.id, ...d.data() } as ChatMessage) : null);
+  }, () => cb(null));
 }
 
 export async function sendMessage(

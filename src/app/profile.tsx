@@ -23,6 +23,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
+import { colors, fonts } from "../theme";
 type UpcomingDate = { name: string; type: string; date: Date; daysAway: number };
 
 function getUpcomingDates(members: Member[]): UpcomingDate[] {
@@ -91,13 +92,13 @@ function HourPicker({
       <View style={s.hourControls}>
         <TouchableOpacity style={s.hourBtn} onPress={() => step(-1)}
           hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-          <Ionicons name="remove" size={16} color="#fff" />
+          <Ionicons name="remove" size={16} color={colors.text} />
         </TouchableOpacity>
         <Text style={s.hourVal}>{String(h12).padStart(2, "0")}</Text>
         <Text style={s.hourColon}>:00</Text>
         <TouchableOpacity style={s.hourBtn} onPress={() => step(1)}
           hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-          <Ionicons name="add" size={16} color="#fff" />
+          <Ionicons name="add" size={16} color={colors.text} />
         </TouchableOpacity>
         <TouchableOpacity style={[s.ampmBtn, isPM && s.ampmBtnPM]} onPress={toggleAMPM}>
           <Text style={s.ampmTxt}>{isPM ? "PM" : "AM"}</Text>
@@ -237,11 +238,11 @@ export default function ProfileScreen() {
         options={{
           title: "My Profile",
           headerShown: true,
-          headerStyle: { backgroundColor: "#07080f" },
-          headerTintColor: "#f0f0f6",
+          headerStyle: { backgroundColor: colors.background },
+          headerTintColor: colors.border,
         }}
       />
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="dark-content" />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -262,7 +263,7 @@ export default function ProfileScreen() {
               </View>
             )}
             <View style={s.cameraIcon}>
-              <Ionicons name="camera" size={16} color="#f0f0f6" />
+              <Ionicons name="camera" size={16} color={colors.onPrimary} />
             </View>
           </TouchableOpacity>
           <Text style={s.avatarHint}>Tap to change photo</Text>
@@ -277,7 +278,7 @@ export default function ProfileScreen() {
               value={name}
               onChangeText={setName}
               placeholder="Your name"
-              placeholderTextColor="rgba(255,255,255,0.3)"
+              placeholderTextColor={colors.textFaint}
             />
 
             <Text style={s.label}>PRONOUNS</Text>
@@ -286,7 +287,7 @@ export default function ProfileScreen() {
               value={pronouns}
               onChangeText={setPronouns}
               placeholder="e.g. she/her, he/him, they/them"
-              placeholderTextColor="rgba(255,255,255,0.3)"
+              placeholderTextColor={colors.textFaint}
             />
 
             <Text style={s.label}>DATE OF BIRTH</Text>
@@ -317,7 +318,7 @@ export default function ProfileScreen() {
               value={bio}
               onChangeText={setBio}
               placeholder="A short bio or tagline"
-              placeholderTextColor="rgba(255,255,255,0.3)"
+              placeholderTextColor={colors.textFaint}
               multiline
             />
           </View>
@@ -332,7 +333,7 @@ export default function ProfileScreen() {
               value={phone}
               onChangeText={setPhone}
               placeholder="Your phone number"
-              placeholderTextColor="rgba(255,255,255,0.3)"
+              placeholderTextColor={colors.textFaint}
               keyboardType="phone-pad"
             />
 
@@ -342,7 +343,7 @@ export default function ProfileScreen() {
               value={email}
               onChangeText={setEmail}
               placeholder="Your email address"
-              placeholderTextColor="rgba(255,255,255,0.3)"
+              placeholderTextColor={colors.textFaint}
               keyboardType="email-address"
               autoCapitalize="none"
             />
@@ -355,7 +356,7 @@ export default function ProfileScreen() {
             <Text style={s.label}>CURRENT CITY</Text>
             {place && (
               <View style={s.currentPlace}>
-                <Ionicons name="location" size={16} color="#a78bfa" />
+                <Ionicons name="location" size={16} color={colors.primary} />
                 <Text style={s.currentPlaceText}>{describePlace(place)}</Text>
               </View>
             )}
@@ -367,12 +368,12 @@ export default function ProfileScreen() {
                 onSubmitEditing={searchPlace}
                 returnKeyType="search"
                 placeholder={place ? "Moved? Search a new city" : "Search for your city"}
-                placeholderTextColor="rgba(255,255,255,0.3)"
+                placeholderTextColor={colors.textFaint}
               />
               <TouchableOpacity style={s.placeSearchBtn} onPress={searchPlace} disabled={searchingPlace}>
                 {searchingPlace
-                  ? <ActivityIndicator color="#a78bfa" size="small" />
-                  : <Ionicons name="search" size={18} color="#a78bfa" />}
+                  ? <ActivityIndicator color={colors.primary} size="small" />
+                  : <Ionicons name="search" size={18} color={colors.primary} />}
               </TouchableOpacity>
             </View>
             {placeResults.map((p) => (
@@ -391,7 +392,7 @@ export default function ProfileScreen() {
               value={hometown}
               onChangeText={setHometown}
               placeholder="Where you grew up"
-              placeholderTextColor="rgba(255,255,255,0.3)"
+              placeholderTextColor={colors.textFaint}
             />
 
           </View>
@@ -403,7 +404,7 @@ export default function ProfileScreen() {
               Let your family know when you're typically awake
             </Text>
             <View style={s.routineRow}>
-              <Ionicons name="sunny-outline" size={18} color="#fbbf24" style={{ marginTop: 2 }} />
+              <Ionicons name="sunny-outline" size={18} color={colors.warm} style={{ marginTop: 2 }} />
               <View style={{ flex: 1 }}>
                 <Text style={s.label}>WAKE UP</Text>
                 <HourPicker
@@ -414,7 +415,7 @@ export default function ProfileScreen() {
               </View>
             </View>
             <View style={[s.routineRow, { marginTop: 4 }]}>
-              <Ionicons name="moon-outline" size={18} color="#a78bfa" style={{ marginTop: 2 }} />
+              <Ionicons name="moon-outline" size={18} color={colors.primary} style={{ marginTop: 2 }} />
               <View style={{ flex: 1 }}>
                 <Text style={s.label}>BEDTIME</Text>
                 <HourPicker
@@ -430,20 +431,20 @@ export default function ProfileScreen() {
           {upcomingDates.length > 0 && (
             <View style={s.card}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                <Ionicons name="calendar-outline" size={18} color="#a78bfa" />
+                <Ionicons name="calendar-outline" size={18} color={colors.primary} />
                 <Text style={s.sectionTitle}>Coming Up</Text>
               </View>
               {upcomingDates.map((item, i) => (
-                <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, borderBottomWidth: i < upcomingDates.length - 1 ? 1 : 0, borderBottomColor: "rgba(255,255,255,0.06)" }}>
-                  <View style={{ width: 46, height: 46, borderRadius: 12, backgroundColor: "rgba(167,139,250,0.12)", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(167,139,250,0.25)" }}>
-                    <Text style={{ color: "#a78bfa", fontSize: 15, fontWeight: "800" }}>
+                <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, borderBottomWidth: i < upcomingDates.length - 1 ? 1 : 0, borderBottomColor: colors.border }}>
+                  <View style={{ width: 46, height: 46, borderRadius: 12, backgroundColor: "#E3E8E3", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.accent }}>
+                    <Text style={{ color: colors.primary, fontSize: 15, fontFamily: fonts.sansBold }}>
                       {item.daysAway === 0 ? "🎉" : String(item.daysAway)}
                     </Text>
-                    {item.daysAway > 0 && <Text style={{ color: "rgba(167,139,250,0.6)", fontSize: 9, fontWeight: "600" }}>days</Text>}
+                    {item.daysAway > 0 && <Text style={{ color: colors.primary, fontSize: 9, fontFamily: fonts.sansSemiBold }}>days</Text>}
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: "#f0f0f6", fontSize: 15, fontWeight: "700" }}>{item.name}'s {item.type}</Text>
-                    <Text style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, marginTop: 2 }}>
+                    <Text style={{ color: colors.text, fontSize: 15, fontFamily: fonts.sansBold }}>{item.name}'s {item.type}</Text>
+                    <Text style={{ color: colors.textMuted, fontFamily: fonts.sans, fontSize: 12, marginTop: 2 }}>
                       {item.date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
                     </Text>
                   </View>
@@ -465,17 +466,17 @@ export default function ProfileScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#07080f" },
+  root: { flex: 1, backgroundColor: colors.background },
   scroll: { alignItems: "center", padding: 24 },
 
   avatarWrap: { position: "relative", marginBottom: 8 },
   avatar: { width: 100, height: 100, borderRadius: 50, overflow: "hidden" },
   avatarPlaceholder: {
-    backgroundColor: "#2d3a5a",
+    backgroundColor: colors.border,
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarInitial: { color: "white", fontSize: 38, fontWeight: "800" },
+  avatarInitial: { color: colors.text, fontSize: 38, fontFamily: fonts.sansBold },
   cameraIcon: {
     position: "absolute",
     bottom: 2,
@@ -483,50 +484,50 @@ const s = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: "#7c6af7",
+    backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
-    borderColor: "#07080f",
+    borderColor: colors.background,
   },
   avatarHint: {
-    color: "rgba(255,255,255,0.35)",
-    fontSize: 12,
+    color: colors.textFaint,
+    fontFamily: fonts.sans, fontSize: 12,
     marginBottom: 24,
   },
 
   card: {
     width: "100%",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    backgroundColor: colors.surface,
     borderRadius: 18,
     padding: 20,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
+    borderColor: colors.border,
     marginBottom: 16,
   },
   sectionTitle: {
-    color: "#f0f0f6",
+    color: colors.text,
     fontSize: 15,
-    fontWeight: "700",
+    fontFamily: fonts.sansBold,
     marginBottom: 4,
   },
   label: {
-    color: "rgba(255,255,255,0.4)",
+    color: colors.textMuted,
     fontSize: 10,
-    fontWeight: "700",
+    fontFamily: fonts.sansBold,
     letterSpacing: 1,
     marginBottom: 6,
     marginTop: 14,
   },
   input: {
-    backgroundColor: "rgba(255,255,255,0.07)",
+    backgroundColor: colors.surface,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    color: "#f0f0f6",
-    fontSize: 15,
+    color: colors.text,
+    fontFamily: fonts.sans, fontSize: 15,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
+    borderColor: colors.border,
   },
   currentPlace: {
     flexDirection: "row",
@@ -534,38 +535,38 @@ const s = StyleSheet.create({
     gap: 6,
     marginBottom: 8,
   },
-  currentPlaceText: { color: "#f0f0f6", fontSize: 15, flexShrink: 1 },
+  currentPlaceText: { color: colors.text, fontFamily: fonts.sans, fontSize: 15, flexShrink: 1 },
   placeSearchRow: { flexDirection: "row", gap: 8 },
   placeSearchBtn: {
     width: 46,
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(167,139,250,0.12)",
+    backgroundColor: "#E3E8E3",
     borderWidth: 1,
-    borderColor: "rgba(167,139,250,0.3)",
+    borderColor: colors.accent,
   },
   placeResult: {
     paddingVertical: 12,
     paddingHorizontal: 4,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.06)",
+    borderBottomColor: colors.border,
   },
-  placeResultText: { color: "rgba(255,255,255,0.85)", fontSize: 14 },
+  placeResultText: { color: colors.text, fontFamily: fonts.sans, fontSize: 14 },
   dateBtn: {
-    backgroundColor: "rgba(255,255,255,0.07)",
+    backgroundColor: colors.surface,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
+    borderColor: colors.border,
   },
-  dateBtnText: { color: "#f0f0f6", fontSize: 15 },
-  dateBtnPlaceholder: { color: "rgba(255,255,255,0.3)", fontSize: 15 },
+  dateBtnText: { color: colors.text, fontFamily: fonts.sans, fontSize: 15 },
+  dateBtnPlaceholder: { color: colors.textFaint, fontFamily: fonts.sans, fontSize: 15 },
 
   routineHint: {
-    color: "rgba(255,255,255,0.35)",
-    fontSize: 12,
+    color: colors.textFaint,
+    fontFamily: fonts.sans, fontSize: 12,
     marginBottom: 4,
   },
   routineRow: {
@@ -580,8 +581,8 @@ const s = StyleSheet.create({
     marginBottom: 2,
   },
   hourLabel: {
-    color: "rgba(255,255,255,0.5)",
-    fontSize: 13,
+    color: colors.textMuted,
+    fontFamily: fonts.sans, fontSize: 13,
     width: 0,
   },
   hourControls: {
@@ -593,47 +594,47 @@ const s = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "rgba(255,255,255,0.1)",
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
   hourVal: {
-    color: "#f0f0f6",
+    color: colors.text,
     fontSize: 22,
-    fontWeight: "800",
+    fontFamily: fonts.sansBold,
     width: 28,
     textAlign: "center",
   },
   hourColon: {
-    color: "rgba(255,255,255,0.5)",
+    color: colors.textMuted,
     fontSize: 16,
-    fontWeight: "600",
+    fontFamily: fonts.sansSemiBold,
   },
   ampmBtn: {
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: colors.border,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
+    borderColor: colors.border,
   },
   ampmBtnPM: {
-    backgroundColor: "rgba(167,139,250,0.25)",
-    borderColor: "rgba(167,139,250,0.5)",
+    backgroundColor: "#E3E8E3",
+    borderColor: colors.accent,
   },
   ampmTxt: {
-    color: "#f0f0f6",
+    color: colors.text,
     fontSize: 13,
-    fontWeight: "800",
+    fontFamily: fonts.sansBold,
     letterSpacing: 0.5,
   },
 
   saveBtn: {
     width: "100%",
-    backgroundColor: "#7c6af7",
+    backgroundColor: colors.primary,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: "center",
   },
-  saveBtnText: { color: "white", fontSize: 16, fontWeight: "700" },
+  saveBtnText: { color: colors.onPrimary, fontSize: 16, fontFamily: fonts.sansBold },
 });

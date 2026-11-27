@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 
+import { colors, fonts } from "../theme";
 type Settings = {
   notificationsEnabled: boolean;
   accentColor: string;
@@ -25,7 +26,7 @@ type Settings = {
 
 const DEFAULT_SETTINGS: Settings = {
   notificationsEnabled: true,
-  accentColor: "#7c6af7",
+  accentColor: colors.primary,
   quietStart: 22,
   quietEnd: 7,
   userName: "",
@@ -65,18 +66,12 @@ function formatHour(h: number) {
   return `${h - 12}pm`;
 }
 
-const ACCENT_COLORS = [
-  { label: "Purple", value: "#7c6af7" },
-  { label: "Blue", value: "#3b82f6" },
-  { label: "Teal", value: "#14b8a6" },
-];
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { settings, update, loaded } = useSettings();
 
   const [notifModal, setNotifModal] = useState(false);
-  const [appearModal, setAppearModal] = useState(false);
   const [quietModal, setQuietModal] = useState(false);
   const [privacyModal, setPrivacyModal] = useState(false);
 
@@ -102,7 +97,7 @@ export default function SettingsScreen() {
     await signOut(auth);
   }
 
-  const accent = settings.accentColor;
+  const accent = colors.primary;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -110,9 +105,9 @@ export default function SettingsScreen() {
         options={{
           headerShown: true,
           title: "Settings",
-          headerStyle: { backgroundColor: "#07080f" },
-          headerTintColor: "#f0f0f6",
-          headerTitleStyle: { fontWeight: "700", fontSize: 18 },
+          headerStyle: { backgroundColor: colors.background },
+          headerTintColor: colors.text,
+          headerTitleStyle: { fontFamily: fonts.sansBold, fontSize: 18 },
           headerLeft: () => (
             <TouchableOpacity
               onPress={() => router.back()}
@@ -139,15 +134,9 @@ export default function SettingsScreen() {
             <Text style={styles.rowSub}>
               {settings.notificationsEnabled ? "On" : "Off"}
             </Text>
-            <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.3)" />
+            <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.row} onPress={() => setAppearModal(true)}>
-            <Ionicons name="moon-outline" size={20} color={accent} />
-            <Text style={styles.rowLabel}>Appearance</Text>
-            <View style={[styles.colorDot, { backgroundColor: settings.accentColor }]} />
-            <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.3)" />
-          </TouchableOpacity>
 
           <TouchableOpacity style={[styles.row, styles.rowLast]} onPress={() => setQuietModal(true)}>
             <Ionicons name="time-outline" size={20} color={accent} />
@@ -155,7 +144,7 @@ export default function SettingsScreen() {
             <Text style={styles.rowSub}>
               {formatHour(settings.quietStart)} – {formatHour(settings.quietEnd)}
             </Text>
-            <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.3)" />
+            <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
           </TouchableOpacity>
         </View>
 
@@ -165,7 +154,13 @@ export default function SettingsScreen() {
           <TouchableOpacity style={styles.row} onPress={() => router.push('/profile')}>
             <Ionicons name="person-outline" size={20} color={accent} />
             <Text style={styles.rowLabel}>Profile</Text>
-            <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.3)" />
+            <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.row} onPress={() => router.push('/about')}>
+            <Ionicons name="information-circle-outline" size={20} color={accent} />
+            <Text style={styles.rowLabel}>About inStereo</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.row} onPress={() => setPrivacyModal(true)}>
@@ -174,12 +169,12 @@ export default function SettingsScreen() {
             <Text style={styles.rowSub}>
               {settings.analyticsEnabled ? "Sharing" : "Private"}
             </Text>
-            <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.3)" />
+            <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
           </TouchableOpacity>
 
           <TouchableOpacity style={[styles.row, styles.rowLast]} onPress={() => setShowSignOutConfirm(true)}>
-            <Ionicons name="log-out-outline" size={20} color="#f87171" />
-            <Text style={[styles.rowLabel, { color: "#f87171" }]}>Sign out</Text>
+            <Ionicons name="log-out-outline" size={20} color={colors.danger} />
+            <Text style={[styles.rowLabel, { color: colors.danger }]}>Sign out</Text>
           </TouchableOpacity>
         </View>
 
@@ -192,7 +187,7 @@ export default function SettingsScreen() {
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Notifications</Text>
             <TouchableOpacity onPress={() => setNotifModal(false)}>
-              <Ionicons name="close" size={24} color="rgba(255,255,255,0.6)" />
+              <Ionicons name="close" size={24} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
           <View style={styles.modalRow}>
@@ -200,8 +195,8 @@ export default function SettingsScreen() {
             <Switch
               value={settings.notificationsEnabled}
               onValueChange={(v) => update({ notificationsEnabled: v })}
-              trackColor={{ false: "rgba(255,255,255,0.15)", true: accent }}
-              thumbColor="#ffffff"
+              trackColor={{ false: colors.border, true: accent }}
+              thumbColor={colors.text}
             />
           </View>
           <Text style={styles.modalHint}>
@@ -216,45 +211,13 @@ export default function SettingsScreen() {
         </View>
       </Modal>
 
-      {/* Appearance Modal */}
-      <Modal visible={appearModal} animationType="slide" presentationStyle="pageSheet">
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Appearance</Text>
-            <TouchableOpacity onPress={() => setAppearModal(false)}>
-              <Ionicons name="close" size={24} color="rgba(255,255,255,0.6)" />
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.modalSectionLabel}>ACCENT COLOR</Text>
-          {ACCENT_COLORS.map((c) => (
-            <TouchableOpacity
-              key={c.value}
-              style={styles.colorRow}
-              onPress={() => update({ accentColor: c.value })}
-            >
-              <View style={[styles.colorSwatch, { backgroundColor: c.value }]} />
-              <Text style={styles.colorLabel}>{c.label}</Text>
-              {settings.accentColor === c.value && (
-                <Ionicons name="checkmark" size={20} color={c.value} />
-              )}
-            </TouchableOpacity>
-          ))}
-          <TouchableOpacity
-            style={[styles.modalDoneBtn, { backgroundColor: accent }]}
-            onPress={() => setAppearModal(false)}
-          >
-            <Text style={styles.modalDoneText}>Done</Text>
-          </TouchableOpacity>
-        </View>
-      </Modal>
-
       {/* Quiet Hours Modal */}
       <Modal visible={quietModal} animationType="slide" presentationStyle="pageSheet">
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Quiet Hours</Text>
             <TouchableOpacity onPress={() => setQuietModal(false)}>
-              <Ionicons name="close" size={24} color="rgba(255,255,255,0.6)" />
+              <Ionicons name="close" size={24} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
           <Text style={styles.modalHint}>Enter hours in 24-hour format (0–23).</Text>
@@ -265,7 +228,7 @@ export default function SettingsScreen() {
             onChangeText={setQuietStartInput}
             keyboardType="number-pad"
             maxLength={2}
-            placeholderTextColor="rgba(255,255,255,0.3)"
+            placeholderTextColor={colors.textFaint}
             placeholder="22"
           />
           <Text style={styles.modalSectionLabel}>END HOUR</Text>
@@ -275,7 +238,7 @@ export default function SettingsScreen() {
             onChangeText={setQuietEndInput}
             keyboardType="number-pad"
             maxLength={2}
-            placeholderTextColor="rgba(255,255,255,0.3)"
+            placeholderTextColor={colors.textFaint}
             placeholder="7"
           />
           <TouchableOpacity
@@ -299,7 +262,7 @@ export default function SettingsScreen() {
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Privacy</Text>
             <TouchableOpacity onPress={() => setPrivacyModal(false)}>
-              <Ionicons name="close" size={24} color="rgba(255,255,255,0.6)" />
+              <Ionicons name="close" size={24} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
           <View style={styles.modalRow}>
@@ -307,8 +270,8 @@ export default function SettingsScreen() {
             <Switch
               value={settings.analyticsEnabled}
               onValueChange={(v) => update({ analyticsEnabled: v })}
-              trackColor={{ false: "rgba(255,255,255,0.15)", true: accent }}
-              thumbColor="#ffffff"
+              trackColor={{ false: colors.border, true: accent }}
+              thumbColor={colors.text}
             />
           </View>
           <Text style={styles.modalHint}>
@@ -345,7 +308,7 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#07080f" },
+  container: { flex: 1, backgroundColor: colors.background },
   content: { padding: 20, paddingBottom: 100 },
   backRow: {
     flexDirection: "row",
@@ -355,19 +318,19 @@ const styles = StyleSheet.create({
   },
   backText: {
     fontSize: 15,
-    fontWeight: "600",
+    fontFamily: fonts.sansSemiBold,
   },
   sectionTitle: {
-    color: "rgba(255,255,255,0.5)",
+    color: colors.textMuted,
     fontSize: 12,
-    fontWeight: "600",
+    fontFamily: fonts.sansSemiBold,
     textTransform: "uppercase",
     letterSpacing: 1,
     marginTop: 16,
     marginBottom: 10,
   },
   card: {
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: colors.surface,
     borderRadius: 16,
     overflow: "hidden",
   },
@@ -377,7 +340,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.05)",
+    borderBottomColor: colors.border,
     gap: 12,
   },
   rowLast: {
@@ -385,13 +348,13 @@ const styles = StyleSheet.create({
   },
   rowLabel: {
     flex: 1,
-    color: "#f0f0f6",
+    color: colors.text,
     fontSize: 15,
-    fontWeight: "500",
+    fontFamily: fonts.sansMedium,
   },
   rowSub: {
-    fontSize: 13,
-    color: "rgba(255,255,255,0.4)",
+    fontFamily: fonts.sans, fontSize: 13,
+    color: colors.textMuted,
     marginRight: 4,
   },
   colorDot: {
@@ -402,14 +365,14 @@ const styles = StyleSheet.create({
   },
   footer: {
     textAlign: "center",
-    color: "rgba(255,255,255,0.25)",
-    fontSize: 12,
+    color: colors.textFaint,
+    fontFamily: fonts.sans, fontSize: 12,
     marginTop: 32,
   },
   // Modal styles
   modalContainer: {
     flex: 1,
-    backgroundColor: "#07080f",
+    backgroundColor: colors.background,
     padding: 24,
   },
   modalHeader: {
@@ -420,13 +383,13 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 22,
-    fontWeight: "800",
-    color: "#f0f0f6",
+    fontFamily: fonts.sansBold,
+    color: colors.text,
   },
   modalSectionLabel: {
     fontSize: 11,
-    fontWeight: "700",
-    color: "rgba(255,255,255,0.4)",
+    fontFamily: fonts.sansBold,
+    color: colors.textMuted,
     letterSpacing: 1,
     marginBottom: 10,
     marginTop: 4,
@@ -435,31 +398,31 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
   },
   modalRowLabel: {
     fontSize: 15,
-    color: "#f0f0f6",
-    fontWeight: "500",
+    color: colors.text,
+    fontFamily: fonts.sansMedium,
     flex: 1,
     marginRight: 12,
   },
   modalHint: {
-    fontSize: 13,
-    color: "rgba(255,255,255,0.4)",
+    fontFamily: fonts.sans, fontSize: 13,
+    color: colors.textMuted,
     lineHeight: 19,
     marginBottom: 24,
   },
   modalInput: {
-    backgroundColor: "rgba(255,255,255,0.07)",
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: colors.border,
     borderRadius: 12,
-    color: "#f0f0f6",
-    fontSize: 15,
+    color: colors.text,
+    fontFamily: fonts.sans, fontSize: 15,
     padding: 13,
     marginBottom: 16,
   },
@@ -470,8 +433,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   modalDoneText: {
-    color: "white",
-    fontWeight: "700",
+    color: colors.onPrimary,
+    fontFamily: fonts.sansBold,
     fontSize: 16,
   },
   colorRow: {
@@ -479,7 +442,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 14,
     padding: 14,
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: colors.surface,
     borderRadius: 12,
     marginBottom: 8,
   },
@@ -491,28 +454,28 @@ const styles = StyleSheet.create({
   colorLabel: {
     flex: 1,
     fontSize: 15,
-    color: "#f0f0f6",
-    fontWeight: "500",
+    color: colors.text,
+    fontFamily: fonts.sansMedium,
   },
   confirmBackdrop: {
     flex: 1, backgroundColor: "rgba(0,0,0,0.7)",
     alignItems: "center", justifyContent: "center", padding: 24,
   },
   confirmCard: {
-    width: "100%", maxWidth: 360, backgroundColor: "#13131c", borderRadius: 20,
-    padding: 22, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)",
+    width: "100%", maxWidth: 360, backgroundColor: colors.surface, borderRadius: 20,
+    padding: 22, borderWidth: 1, borderColor: colors.border,
   },
-  confirmTitle: { color: "#f0f0f6", fontSize: 17, fontWeight: "700", marginBottom: 6 },
-  confirmMessage: { color: "rgba(255,255,255,0.5)", fontSize: 14, marginBottom: 20 },
+  confirmTitle: { color: colors.text, fontSize: 17, fontFamily: fonts.sansBold, marginBottom: 6 },
+  confirmMessage: { color: colors.textMuted, fontFamily: fonts.sans, fontSize: 14, marginBottom: 20 },
   confirmActions: { flexDirection: "row", gap: 12 },
   confirmCancelBtn: {
     flex: 1, alignItems: "center", paddingVertical: 12,
-    borderRadius: 12, backgroundColor: "rgba(255,255,255,0.08)",
+    borderRadius: 12, backgroundColor: colors.surface,
   },
-  confirmCancelTxt: { color: "rgba(255,255,255,0.7)", fontSize: 14, fontWeight: "600" },
+  confirmCancelTxt: { color: colors.text, fontSize: 14, fontFamily: fonts.sansSemiBold },
   confirmSignOutBtn: {
     flex: 1, alignItems: "center", paddingVertical: 12,
-    borderRadius: 12, backgroundColor: "#f87171",
+    borderRadius: 12, backgroundColor: colors.danger,
   },
-  confirmSignOutTxt: { color: "#fff", fontSize: 14, fontWeight: "700" },
+  confirmSignOutTxt: { color: colors.text, fontSize: 14, fontFamily: fonts.sansBold },
 });

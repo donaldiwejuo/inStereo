@@ -1,297 +1,215 @@
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Image,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { Member, useMembers } from "../../context/MembersContext";
-import { notifyBirthday } from "../../lib/notifications";
+import { StatusBar } from "expo-status-bar";
+import { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import PersonDetail from "../../components/PersonDetail";
+import { Avatar } from "../../components/ui";
+import { useAuth } from "../../context/AuthContext";
+import { Member, useMembers } from "../../context/MembersContext";
+import { UserProfile, watchUserProfile } from "../../lib/firestore";
+import { notifyBirthday } from "../../lib/notifications";
+import { reachStatus, safeTimezone } from "../../lib/presence";
+import { colors, fonts, radius, space, tintFor, type } from "../../theme";
 
-const GRADIENTS: Record<string, [string, string]> = {
-  night: ["#060810", "#0c0e1a"],
-  dawn: ["#170d1f", "#220e14"],
-  morning: ["#091828", "#0b1e18"],
-  afternoon: ["#0a1628", "#0b1a10"],
-  evening: ["#140d26", "#1a0c1e"],
-  "late-evening": ["#080a1e", "#10081c"],
-};
+type IconName = keyof typeof Ionicons.glyphMap;
 
-const AVATAR_COLORS = ["#2d3a5a", "#2d4a3e", "#3a2d4a", "#4a3a2d", "#2d4a4a"];
-
-function getAvatarColor(id: number) {
-  return AVATAR_COLORS[id % AVATAR_COLORS.length];
+function weatherCodeInfo(code: number): { icon: IconName; label: string; severe: boolean } {
+  if (code === 0) return { icon: "sunny-outline", label: "Clear", severe: false };
+  if (code <= 2) return { icon: "partly-sunny-outline", label: "Mostly clear", severe: false };
+  if (code === 3 || code === 45 || code === 48) return { icon: "cloud-outline", label: "Cloudy", severe: false };
+  if (code === 65 || code === 82) return { icon: "rainy-outline", label: "Heavy rain", severe: true };
+  if ((code >= 51 && code <= 63) || code === 80 || code === 81) return { icon: "rainy-outline", label: "Rain", severe: false };
+  if (code === 75) return { icon: "snow-outline", label: "Heavy snow", severe: true };
+  if (code >= 71 && code <= 77) return { icon: "snow-outline", label: "Snow", severe: false };
+  if (code >= 95) return { icon: "thunderstorm-outline", label: "Storm", severe: true };
+  return { icon: "partly-sunny-outline", label: "", severe: false };
 }
 
-function weatherCodeInfo(code: number) {
-  if (code === 0) return { ionicon: "sunny-outline", label: "Clear", severe: false };
-  if (code <= 2) return { ionicon: "partly-sunny-outline", label: "Mostly clear", severe: false };
-  if (code === 3) return { ionicon: "cloud-outline", label: "Overcast", severe: false };
-  if ([45, 48].includes(code)) return { ionicon: "cloud-outline", label: "Foggy", severe: false };
-  if ([51, 53, 55].includes(code)) return { ionicon: "rainy-outline", label: "Drizzle", severe: false };
-  if ([61, 63].includes(code)) return { ionicon: "rainy-outline", label: "Rain", severe: false };
-  if (code === 65) return { ionicon: "rainy-outline", label: "Heavy rain", severe: true };
-  if ([71, 73].includes(code)) return { ionicon: "snow-outline", label: "Snow", severe: false };
-  if (code === 75) return { ionicon: "snow-outline", label: "Heavy snow", severe: true };
-  if ([80, 81].includes(code)) return { ionicon: "rainy-outline", label: "Showers", severe: false };
-  if (code === 82) return { ionicon: "rainy-outline", label: "Violent showers", severe: true };
-  if (code === 95) return { ionicon: "thunderstorm-outline", label: "Thunderstorm", severe: true };
-  if ([96, 99].includes(code)) return { ionicon: "thunderstorm-outline", label: "Severe storm", severe: true };
-  return { ionicon: "partly-sunny-outline", label: "Unknown", severe: false };
+function greeting(now: Date): string {
+  const h = now.getHours();
+  if (h < 5) return "Good evening";
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
 }
 
-function safeTimezone(tz: string | undefined): string {
-  if (!tz) return "UTC";
-  try { Intl.DateTimeFormat(undefined, { timeZone: tz }); return tz; } catch { return "UTC"; }
-}
+type Weather = { temp: number; icon: IconName; label: string; severe: boolean };
 
-function getTimeOfDay(timezone: string) {
-  try {
-    const h = parseInt(
-      new Intl.DateTimeFormat("en-US", { timeZone: safeTimezone(timezone), hour: "2-digit", hour12: false }).format(new Date()),
-    ) % 24;
-    if (h >= 5 && h < 8) return "dawn";
-    if (h >= 8 && h < 12) return "morning";
-    if (h >= 12 && h < 17) return "afternoon";
-    if (h >= 17 && h < 20) return "evening";
-    if (h >= 20 && h < 22) return "late-evening";
-    return "night";
-  } catch { return "night"; }
-}
-
-function getCallStatus(timezone: string, wakeHour: number, sleepHour: number) {
-  const tz = safeTimezone(timezone);
-  const now = new Date();
-  const h = parseInt(new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "2-digit", hour12: false }).format(now)) % 24;
-  const m = parseInt(new Intl.DateTimeFormat("en-US", { timeZone: tz, minute: "2-digit" }).format(now));
-  const t = h + m / 60;
-  if (t >= wakeHour + 1 && t < sleepHour - 1) return { label: "Good time to call", dot: "#22c55e" };
-  if ((t >= wakeHour && t < wakeHour + 1) || (t >= sleepHour - 1 && t < sleepHour))
-    return { label: "Waking / winding down", dot: "#f59e0b" };
-  return { label: "Probably sleeping", dot: "#6b7280" };
-}
-
-function useWeather(member: Member) {
-  const [weather, setWeather] = useState<any>(null);
-  const lastRef = useRef<{ temp: number; code: number } | null>(null);
-  const hasGoodValueRef = useRef(false);
+function useWeather(member: Member): Weather | null {
+  const [weather, setWeather] = useState<Weather | null>(null);
+  const last = useRef<string>("");
 
   useEffect(() => {
     const unit = member.country === "United States" ? "fahrenheit" : "celsius";
+    let cancelled = false;
 
-    async function doFetch() {
+    async function load() {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const timeout = setTimeout(() => controller.abort(), 5000);
       try {
         const r = await fetch(
           `https://api.open-meteo.com/v1/forecast?latitude=${member.lat}&longitude=${member.lon}&current=temperature_2m,weather_code&temperature_unit=${unit}`,
           { signal: controller.signal },
         );
-        clearTimeout(timeoutId);
         const d = await r.json();
-        if (!d?.current || typeof d.current.temperature_2m !== "number") throw new Error("bad response");
+        if (typeof d?.current?.temperature_2m !== "number") return;
         const temp = Math.round(d.current.temperature_2m);
         const code = typeof d.current.weather_code === "number" ? d.current.weather_code : 0;
-        if (lastRef.current?.temp === temp && lastRef.current?.code === code) return;
-        lastRef.current = { temp, code };
-        hasGoodValueRef.current = true;
-        setWeather({ temp, unit: unit === "fahrenheit" ? "°F" : "°C", ...weatherCodeInfo(code) });
+        const key = `${temp}:${code}`;
+        if (cancelled || key === last.current) return;
+        last.current = key;
+        setWeather({ temp, ...weatherCodeInfo(code) });
       } catch {
-        clearTimeout(timeoutId);
-        if (!hasGoodValueRef.current) setWeather({ error: true });
+        // Keep showing the last reading; the card simply hides weather if we never got one.
+      } finally {
+        clearTimeout(timeout);
       }
     }
 
-    doFetch();
-    const interval = setInterval(doFetch, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [member.id]);
+    load();
+    const id = setInterval(load, 5 * 60 * 1000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [member.lat, member.lon, member.country]);
 
   return weather;
 }
 
-function FamilyCard({ member, tick, onView }: { member: Member; tick: number; onView: () => void }) {
+function PersonCard({ member, now, onPress }: { member: Member; now: Date; onPress: () => void }) {
   const weather = useWeather(member);
-  const [zoom, setZoom] = useState(false);
-  const tod = getTimeOfDay(member.timezone);
-  const call = getCallStatus(member.timezone, member.wakeHour, member.sleepHour);
   const tz = safeTimezone(member.timezone);
-  const timeStr = useMemo(
-    () => new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit", hour12: true }).format(new Date()),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [tick, tz],
-  );
-  const dateStr = useMemo(
-    () => new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "long", month: "short", day: "numeric" }).format(new Date()),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [tick, tz],
-  );
-
-  const avatarColor = getAvatarColor(member.id);
-  const initials = member.name[0]?.toUpperCase() ?? "?";
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit", hour12: true })
+    .formatToParts(now);
+  const clock = parts.filter((p) => p.type === "hour" || p.type === "minute" || p.type === "literal").map((p) => p.value).join("").trim();
+  const ampm = parts.find((p) => p.type === "dayPeriod")?.value ?? "";
+  const status = reachStatus(member, now);
+  const place = [member.city, member.country].filter(Boolean).join(", ");
 
   return (
-    <LinearGradient colors={GRADIENTS[tod]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.card}>
+    <TouchableOpacity
+      style={[s.card, { backgroundColor: tintFor(member.id) }]}
+      onPress={onPress}
+      activeOpacity={0.85}
+      accessibilityRole="button"
+      accessibilityLabel={`${member.name}, ${clock} ${ampm} in ${member.city}. ${status.label}`}
+    >
       <View style={s.cardTop}>
-        <TouchableOpacity onPress={() => member.photoUri && setZoom(true)}>
-          {member.photoUri ? (
-            <Image source={{ uri: member.photoUri }} style={s.avatarCircle} />
-          ) : (
-            <View style={[s.avatarCircle, { backgroundColor: avatarColor }]}>
-              <Text style={s.avatarInitial}>{initials}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        <Avatar person={member} size={52} ring />
         <View style={{ flex: 1 }}>
-          <Text style={s.name}>{member.name}</Text>
-          <View style={s.badge}>
-            <Text style={s.badgeText}>{member.relationship.toUpperCase()}</Text>
+          <Text style={s.name} numberOfLines={1}>{member.name}</Text>
+          <Text style={s.relationship} numberOfLines={1}>{member.relationship}</Text>
+        </View>
+        {weather && (
+          <View style={s.weather}>
+            <Ionicons name={weather.icon} size={20} color={weather.severe ? colors.warm : colors.textMuted} />
+            <Text style={[s.temp, weather.severe && { color: colors.warm }]}>{weather.temp}°</Text>
           </View>
-        </View>
-        <View style={{ alignItems: "flex-end" }}>
-          <Text style={s.time}>{timeStr}</Text>
-          <Text style={s.date}>{dateStr}</Text>
-        </View>
+        )}
       </View>
 
-      <View style={s.locationRow}>
-        <Ionicons name="location-outline" size={12} color="rgba(255,255,255,0.4)" />
-        <Text style={s.location}>{member.city}, {member.country}</Text>
+      <View style={s.clockRow}>
+        <Text style={s.clock}>{clock}</Text>
+        <Text style={s.ampm}>{ampm}</Text>
       </View>
 
-      {weather === null ? (
-        <ActivityIndicator color="rgba(255,255,255,0.4)" style={{ marginVertical: 10 }} />
-      ) : weather?.error ? (
-        <View style={s.weatherRow}>
-          <Ionicons name="warning-outline" size={18} color="rgba(255,255,255,0.5)" />
-          <Text style={s.wLabel}>Weather unavailable</Text>
-        </View>
-      ) : (
-        <View style={s.weatherRow}>
-          <Ionicons name={weather.ionicon as any} size={22} color="rgba(255,255,255,0.7)" />
-          <Text style={s.wTemp}>{weather.temp}{weather.unit}</Text>
-          <Text style={s.wLabel}>{weather.label}</Text>
-          {weather.severe && (
-            <View style={s.alertBadge}>
-              <Ionicons name="warning-outline" size={14} color="#fca5a5" />
-            </View>
-          )}
-        </View>
-      )}
-
-      <View style={s.callRow}>
-        <View style={[s.dot, { backgroundColor: call.dot }]} />
-        <Text style={s.callLabel}>{call.label}</Text>
+      <View style={s.placeRow}>
+        <Ionicons name="location-outline" size={15} color={colors.textMuted} />
+        <Text style={s.place} numberOfLines={1}>{place}</Text>
+        {weather?.severe && <Text style={s.severe}> · {weather.label}</Text>}
       </View>
 
-      <TouchableOpacity
-        style={s.viewBtn}
-        onPress={onView}
-        activeOpacity={0.75}
-      >
-        <Text style={s.viewBtnTxt}>View Profile</Text>
-      </TouchableOpacity>
+      <View style={s.divider} />
 
-      <Modal visible={zoom} transparent animationType="fade">
-        <TouchableOpacity
-          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.92)", justifyContent: "center", alignItems: "center" }}
-          activeOpacity={1}
-          onPress={() => setZoom(false)}
-        >
-          <Image
-            source={{ uri: member.photoUri! }}
-            style={{ width: "90%", aspectRatio: 1, borderRadius: 16 }}
-            resizeMode="cover"
-          />
-        </TouchableOpacity>
-      </Modal>
-    </LinearGradient>
+      <View style={s.statusRow}>
+        <View style={[s.dotHalo, { backgroundColor: status.dot + "33" }]}>
+          <View style={[s.dot, { backgroundColor: status.dot }]} />
+        </View>
+        <Text style={s.status}>{status.label}</Text>
+        <Ionicons name="arrow-forward" size={20} color={colors.textMuted} />
+      </View>
+    </TouchableOpacity>
   );
 }
 
 export default function HomeScreen() {
-  const { members, loading: membersLoading } = useMembers();
+  const { members, loading } = useMembers();
+  const { user } = useAuth();
   const router = useRouter();
-  const [tick, setTick] = useState(0);
+  const [now, setNow] = useState(() => new Date());
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   // Track the open person by id and read them from the live list, so their
   // detail sheet reflects label/location/photo changes while it's open.
   const [viewingId, setViewingId] = useState<number | null>(null);
-  const [localMembers, setLocalMembers] = useState<Member[]>([]);
-  const viewingMember = localMembers.find((m) => m.id === viewingId) ?? null;
-
-  useEffect(() => { setLocalMembers(members); }, [members]);
+  const [removedIds, setRemovedIds] = useState<Set<number>>(new Set());
+  const people = members.filter((m) => !removedIds.has(m.id));
+  const viewing = people.find((m) => m.id === viewingId) ?? null;
 
   useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 1000);
+    // Clocks only show minutes, so a 10-second tick is plenty.
+    const id = setInterval(() => setNow(new Date()), 10_000);
     return () => clearInterval(id);
   }, []);
 
   useEffect(() => {
+    if (!user) return;
+    return watchUserProfile(user.uid, setProfile);
+  }, [user?.uid]);
+
+  useEffect(() => {
     const today = new Date();
-    const mm = String(today.getMonth() + 1).padStart(2, "0");
-    const dd = String(today.getDate()).padStart(2, "0");
-    const todayMD = `${mm}-${dd}`;
+    const todayMD = `${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
     members.forEach((m) => {
       if (m.birthday && m.birthday.slice(5) === todayMD) notifyBirthday(m, "birthday");
       if (m.anniversary && m.anniversary.slice(5) === todayMD) notifyBirthday(m, "anniversary");
       (m.importantDates || []).forEach((d) => {
-        if (d.date && d.date.slice(5) === todayMD)
-          notifyBirthday({ ...m, name: m.name + " — " + d.label } as any, "birthday");
+        if (d.date && d.date.slice(5) === todayMD) notifyBirthday({ ...m, name: m.name + " — " + d.label } as any, "birthday");
       });
     });
   }, [members]);
 
+  const firstName = profile?.name?.trim().split(/\s+/)[0];
+  const dateLine = new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric" }).format(now).toUpperCase();
+
   return (
     <View style={s.root}>
-      <StatusBar barStyle="light-content" />
-      <SafeAreaView style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-          {membersLoading ? (
-            <ActivityIndicator color="#a78bfa" style={{ marginTop: 60 }} />
-          ) : localMembers.length === 0 ? (
-            <View style={{ alignItems: "center", paddingTop: 80, gap: 14 }}>
-              <Ionicons name="people-outline" size={56} color="rgba(255,255,255,0.12)" />
-              <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 18, fontWeight: "700" }}>
-                No connections yet
-              </Text>
-              <Text style={{ color: "rgba(255,255,255,0.3)", fontSize: 14, textAlign: "center", lineHeight: 20, paddingHorizontal: 32 }}>
-                Tap the + button to invite family members and friends.
-              </Text>
-            </View>
-          ) : (
-            localMembers.map((m) => (
-              <FamilyCard key={m.id} member={m} tick={tick} onView={() => setViewingId(m.id)} />
-            ))
-          )}
-          <View style={{ height: 100 }} />
-        </ScrollView>
-      </SafeAreaView>
+      <StatusBar style="dark" />
+      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+        <Text style={type.eyebrow}>{dateLine}</Text>
+        <Text style={[type.display, s.greeting]}>
+          {greeting(now)}{firstName ? `, ${firstName}` : ""}.
+        </Text>
+        <Text style={[type.subtitle, s.subtitle]}>Here's a quiet look at the people you care about.</Text>
 
-      <TouchableOpacity
-        style={s.fab}
-        onPress={() => router.push("/connections")}
-        activeOpacity={0.8}
-      >
-        <Ionicons name="person-add-outline" size={24} color="white" />
-      </TouchableOpacity>
+        <View style={s.sectionHeader}>
+          <Text style={type.sectionTitle}>Your people</Text>
+          {people.length > 0 && <Text style={type.caption}>{people.length}</Text>}
+        </View>
 
-      {viewingMember && (
+        {loading ? (
+          <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
+        ) : people.length === 0 ? (
+          <View style={s.empty}>
+            <Ionicons name="people-outline" size={40} color={colors.textFaint} />
+            <Text style={s.emptyTitle}>No one here yet</Text>
+            <Text style={[type.caption, { textAlign: "center" }]}>
+              Invite family back home to see their local time, weather and whether it's a good moment to call.
+            </Text>
+            <TouchableOpacity style={s.emptyBtn} onPress={() => router.push("/connections")} activeOpacity={0.85}>
+              <Text style={s.emptyBtnText}>Invite someone</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          people.map((m) => <PersonCard key={m.id} member={m} now={now} onPress={() => setViewingId(m.id)} />)
+        )}
+      </ScrollView>
+
+      {viewing && (
         <PersonDetail
-          member={viewingMember}
-          visible={!!viewingMember}
+          member={viewing}
+          visible
           onClose={() => setViewingId(null)}
           onDelete={(id) => {
-            setLocalMembers((prev) => prev.filter((m) => m.id !== id));
+            setRemovedIds((prev) => new Set(prev).add(id));
             setViewingId(null);
           }}
         />
@@ -301,48 +219,30 @@ export default function HomeScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#07080f" },
-  scroll: { padding: 16, gap: 14 },
-  card: { borderRadius: 22, padding: 20 },
-  cardTop: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 12 },
-  avatarCircle: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", overflow: "hidden" },
-  avatarInitial: { color: "white", fontWeight: "700", fontSize: 20 },
-  name: { fontSize: 20, fontWeight: "700", color: "white" },
-  badge: {
-    backgroundColor: "rgba(255,255,255,0.18)", paddingHorizontal: 8, paddingVertical: 2,
-    borderRadius: 20, marginTop: 3, alignSelf: "flex-start",
-  },
-  badgeText: { fontSize: 9, fontWeight: "700", color: "rgba(255,255,255,0.8)", letterSpacing: 0.5 },
-  time: { fontSize: 28, fontWeight: "800", color: "white", letterSpacing: -1, textAlign: "right" },
-  date: { fontSize: 11, color: "rgba(255,255,255,0.5)", textAlign: "right" },
-  locationRow: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 10 },
-  location: { fontSize: 12, color: "rgba(255,255,255,0.5)" },
-  weatherRow: {
-    flexDirection: "row", alignItems: "center", gap: 10,
-    backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 12, padding: 11, marginBottom: 10,
-  },
-  wTemp: { fontSize: 20, fontWeight: "700", color: "white" },
-  wLabel: { fontSize: 12, color: "rgba(255,255,255,0.6)", flex: 1 },
-  alertBadge: {
-    backgroundColor: "rgba(239,68,68,0.3)", borderWidth: 1,
-    borderColor: "rgba(239,68,68,0.5)", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3,
-  },
-  callRow: {
-    flexDirection: "row", alignItems: "center", gap: 8,
-    backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 10, padding: 10,
-  },
-  dot: { width: 9, height: 9, borderRadius: 5 },
-  callLabel: { fontSize: 13, fontWeight: "500", color: "rgba(255,255,255,0.85)" },
-  viewBtn: {
-    marginTop: 10, backgroundColor: "rgba(167,139,250,0.15)", borderRadius: 12,
-    padding: 10, alignItems: "center", borderWidth: 1, borderColor: "rgba(167,139,250,0.3)",
-  },
-  viewBtnTxt: { color: "#a78bfa", fontWeight: "700", fontSize: 13 },
-  fab: {
-    position: "absolute", bottom: 98, right: 20,
-    width: 56, height: 56, borderRadius: 28,
-    backgroundColor: "#7c6af7", alignItems: "center", justifyContent: "center",
-    shadowColor: "#7c6af7", shadowOpacity: 0.45, shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 }, elevation: 10,
-  },
+  root: { flex: 1, backgroundColor: colors.background },
+  scroll: { paddingHorizontal: 22, paddingTop: 28, paddingBottom: 120 },
+  greeting: { marginTop: 8 },
+  subtitle: { marginTop: 10, maxWidth: 320 },
+  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 32, marginBottom: 14 },
+  card: { borderRadius: radius.lg, padding: 22, marginBottom: space.lg },
+  cardTop: { flexDirection: "row", alignItems: "center", gap: 14 },
+  name: { fontFamily: fonts.sansBold, fontSize: 18, color: colors.text },
+  relationship: { fontFamily: fonts.sans, fontSize: 14, color: colors.textMuted, marginTop: 2 },
+  weather: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", marginTop: 4 },
+  temp: { fontFamily: fonts.sansMedium, fontSize: 16, color: colors.text },
+  clockRow: { flexDirection: "row", alignItems: "baseline", gap: 6, marginTop: 18 },
+  clock: { fontFamily: fonts.serif, fontSize: 52, letterSpacing: -1.5, color: colors.text, lineHeight: 58 },
+  ampm: { fontFamily: fonts.sansMedium, fontSize: 14, color: colors.textMuted },
+  placeRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 },
+  place: { fontFamily: fonts.sans, fontSize: 14, color: colors.textMuted, flexShrink: 1 },
+  severe: { fontFamily: fonts.sansSemiBold, fontSize: 14, color: colors.warm },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border, marginVertical: 16 },
+  statusRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  dotHalo: { width: 16, height: 16, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  status: { flex: 1, fontFamily: fonts.sansSemiBold, fontSize: 15, color: colors.text },
+  empty: { alignItems: "center", gap: 12, paddingVertical: 40, paddingHorizontal: 20 },
+  emptyTitle: { fontFamily: fonts.serif, fontSize: 24, color: colors.text },
+  emptyBtn: { marginTop: 8, backgroundColor: colors.primary, borderRadius: radius.pill, paddingHorizontal: 22, paddingVertical: 12 },
+  emptyBtnText: { fontFamily: fonts.sansSemiBold, color: colors.onPrimary, fontSize: 15 },
 });

@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useFonts, DancingScript_700Bold } from '@expo-google-fonts/dancing-script';
 import { Stack, useRouter } from "expo-router";
 import {
   ScrollView,
@@ -10,6 +9,7 @@ import {
   View,
 } from "react-native";
 
+import { colors, fonts } from "../theme";
 const FEATURES = [
   "Real-time local time for each person in your life",
   "Live weather where they are",
@@ -21,17 +21,16 @@ const FEATURES = [
 
 export default function AboutScreen() {
   const router = useRouter();
-  const [fontsLoaded] = useFonts({ DancingScript_700Bold });
 
   return (
     <View style={a.root}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="dark-content" />
       <Stack.Screen
         options={{
           headerShown: true,
           title: 'About',
-          headerStyle: { backgroundColor: '#07080f' },
-          headerTintColor: '#f0f0f6',
+          headerStyle: { backgroundColor: colors.background },
+          headerTintColor: colors.border,
         }}
       />
       <ScrollView
@@ -40,17 +39,7 @@ export default function AboutScreen() {
       >
         {/* Hero */}
         <View style={a.hero}>
-          <Text
-            style={[
-              a.heroTitle,
-              {
-                fontFamily: fontsLoaded ? 'DancingScript_700Bold' : undefined,
-                fontWeight: fontsLoaded ? undefined : '800',
-              },
-            ]}
-          >
-            inStereo
-          </Text>
+          <Text style={[a.heroTitle, { fontFamily: fonts.serif }]}>inStereo</Text>
           <Text style={a.heroSlogan}>everyone, everywhere, all together</Text>
         </View>
 
@@ -67,7 +56,7 @@ export default function AboutScreen() {
           <Text style={a.sectionTitle}>What inStereo Can Do</Text>
           {FEATURES.map((feature, i) => (
             <View key={i} style={a.featureRow}>
-              <Ionicons name="checkmark-circle" size={16} color="#a78bfa" style={{ marginTop: 2 }} />
+              <Ionicons name="checkmark-circle" size={16} color={colors.primary} style={{ marginTop: 2 }} />
               <Text style={a.featureText}>{feature}</Text>
             </View>
           ))}
@@ -100,48 +89,48 @@ export default function AboutScreen() {
 }
 
 const a = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#07080f' },
+  root: { flex: 1, backgroundColor: colors.background },
   scroll: { padding: 20, gap: 16 },
   hero: {
     alignItems: 'center',
     paddingVertical: 32,
   },
   heroTitle: {
-    fontSize: 56,
-    color: '#f0f0f6',
+    fontFamily: fonts.sans, fontSize: 56,
+    color: colors.text,
     letterSpacing: 0,
   },
   heroSlogan: {
-    color: 'rgba(255,255,255,0.4)',
+    color: colors.textMuted,
     fontSize: 11,
-    fontWeight: '500',
+    fontFamily: fonts.sansMedium,
     letterSpacing: 2,
     textTransform: 'uppercase',
     marginTop: 6,
   },
   card: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
+    borderColor: colors.border,
   },
   sectionTitle: {
-    color: '#a78bfa',
+    color: colors.primary,
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: fonts.sansBold,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
     marginBottom: 12,
   },
   body: {
-    color: 'rgba(255,255,255,0.75)',
-    fontSize: 15,
+    color: colors.text,
+    fontFamily: fonts.sans, fontSize: 15,
     lineHeight: 24,
   },
   quote: {
-    color: 'rgba(255,255,255,0.75)',
-    fontSize: 15,
+    color: colors.text,
+    fontFamily: fonts.sans, fontSize: 15,
     lineHeight: 24,
     fontStyle: 'italic',
   },
@@ -152,8 +141,8 @@ const a = StyleSheet.create({
     marginBottom: 10,
   },
   featureText: {
-    color: 'rgba(255,255,255,0.75)',
-    fontSize: 14,
+    color: colors.text,
+    fontFamily: fonts.sans, fontSize: 14,
     lineHeight: 22,
     flex: 1,
   },
@@ -162,8 +151,8 @@ const a = StyleSheet.create({
     paddingVertical: 20,
   },
   footerText: {
-    color: 'rgba(255,255,255,0.25)',
-    fontSize: 12,
+    color: colors.textFaint,
+    fontFamily: fonts.sans, fontSize: 12,
     letterSpacing: 0.5,
   },
 });

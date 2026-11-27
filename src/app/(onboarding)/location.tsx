@@ -14,6 +14,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { updateUserProfile } from "../../lib/firestore";
 
+import { colors, fonts } from "../../theme";
 const COUNTRIES = [
   { code: "US", name: "United States" }, { code: "GB", name: "United Kingdom" },
   { code: "NG", name: "Nigeria" }, { code: "CA", name: "Canada" },
@@ -121,7 +122,7 @@ export default function OnboardingLocation() {
           value={name}
           onChangeText={setName}
           placeholder="e.g. Donald"
-          placeholderTextColor="rgba(255,255,255,0.25)"
+          placeholderTextColor={colors.textFaint}
           autoCapitalize="words"
           returnKeyType="next"
         />
@@ -132,7 +133,7 @@ export default function OnboardingLocation() {
           value={city}
           onChangeText={setCity}
           placeholder="e.g. Durham"
-          placeholderTextColor="rgba(255,255,255,0.25)"
+          placeholderTextColor={colors.textFaint}
           autoCapitalize="words"
           returnKeyType="next"
         />
@@ -153,7 +154,7 @@ export default function OnboardingLocation() {
               value={countrySearch}
               onChangeText={setCountrySearch}
               placeholder="Search country…"
-              placeholderTextColor="rgba(255,255,255,0.25)"
+              placeholderTextColor={colors.textFaint}
               autoCapitalize="words"
             />
             {countrySearch.length > 0 && (
@@ -182,7 +183,7 @@ export default function OnboardingLocation() {
           activeOpacity={0.8}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.text} />
           ) : (
             <Text style={s.btnTxt}>Finish setup</Text>
           )}
@@ -193,39 +194,39 @@ export default function OnboardingLocation() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#07080f", paddingHorizontal: 28, paddingTop: 80 },
+  root: { flex: 1, backgroundColor: colors.background, paddingHorizontal: 28, paddingTop: 80 },
   progress: { flexDirection: "row", gap: 6, marginBottom: 48 },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.15)" },
-  dotActive: { backgroundColor: "#a78bfa", width: 24 },
-  dotDone: { backgroundColor: "rgba(167,139,250,0.5)" },
-  heading: { color: "#fff", fontSize: 30, fontWeight: "800", marginBottom: 8 },
-  sub: { color: "rgba(255,255,255,0.45)", fontSize: 15, marginBottom: 36, lineHeight: 22 },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.border },
+  dotActive: { backgroundColor: colors.primary, width: 24 },
+  dotDone: { backgroundColor: colors.primary },
+  heading: { color: colors.text, fontSize: 30, fontFamily: fonts.sansBold, marginBottom: 8 },
+  sub: { color: colors.textMuted, fontFamily: fonts.sans, fontSize: 15, marginBottom: 36, lineHeight: 22 },
   label: {
-    color: "rgba(255,255,255,0.45)", fontSize: 11, fontWeight: "600",
+    color: colors.textMuted, fontSize: 11, fontFamily: fonts.sansSemiBold,
     letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 8, marginTop: 12,
   },
   input: {
-    backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 14,
-    color: "#fff", fontSize: 16,
+    backgroundColor: colors.surface, borderRadius: 14,
+    color: colors.text, fontFamily: fonts.sans, fontSize: 16,
     paddingHorizontal: 18, paddingVertical: 14, marginBottom: 4,
-    borderWidth: 1, borderColor: "rgba(255,255,255,0.08)",
+    borderWidth: 1, borderColor: colors.border,
   },
   dropdown: {
-    backgroundColor: "#0e0f1e", borderRadius: 12,
-    borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: colors.background, borderRadius: 12,
+    borderWidth: 1, borderColor: colors.border,
     marginBottom: 4, overflow: "hidden",
   },
-  dropdownItem: { paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.06)" },
-  dropdownTxt: { color: "#fff", fontSize: 15 },
-  dropdownEmpty: { color: "rgba(255,255,255,0.3)", padding: 16, textAlign: "center" },
+  dropdownItem: { paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border },
+  dropdownTxt: { color: colors.text, fontFamily: fonts.sans, fontSize: 15 },
+  dropdownEmpty: { color: colors.textFaint, padding: 16, textAlign: "center" },
   selectedCountry: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    backgroundColor: "rgba(167,139,250,0.1)", borderRadius: 14,
+    backgroundColor: "#E3E8E3", borderRadius: 14,
     paddingHorizontal: 18, paddingVertical: 14, marginBottom: 4,
-    borderWidth: 1, borderColor: "rgba(167,139,250,0.3)",
+    borderWidth: 1, borderColor: colors.accent,
   },
-  selectedCountryTxt: { color: "#fff", fontSize: 16, fontWeight: "600" },
-  changeTxt: { color: "#a78bfa", fontSize: 13 },
-  btn: { backgroundColor: "#a78bfa", borderRadius: 14, paddingVertical: 16, alignItems: "center" },
-  btnTxt: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  selectedCountryTxt: { color: colors.text, fontSize: 16, fontFamily: fonts.sansSemiBold },
+  changeTxt: { color: colors.primary, fontFamily: fonts.sans, fontSize: 13 },
+  btn: { backgroundColor: colors.primary, borderRadius: 14, paddingVertical: 16, alignItems: "center" },
+  btnTxt: { color: colors.onPrimary, fontSize: 16, fontFamily: fonts.sansBold },
 });

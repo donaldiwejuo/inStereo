@@ -18,6 +18,7 @@ import {
 } from "react-native";
 import { auth } from "../../config/firebase";
 
+import { colors, fonts } from "../../theme";
 export default function LoginScreen() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
@@ -68,7 +69,7 @@ export default function LoginScreen() {
       style={s.root}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="dark-content" />
 
       <View style={s.top}>
         <Text style={s.wordmark}>inStereo</Text>
@@ -103,7 +104,7 @@ export default function LoginScreen() {
           value={email}
           onChangeText={setEmail}
           placeholder="you@example.com"
-          placeholderTextColor="rgba(255,255,255,0.25)"
+          placeholderTextColor={colors.textFaint}
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
@@ -117,7 +118,7 @@ export default function LoginScreen() {
             value={password}
             onChangeText={setPassword}
             placeholder="••••••••"
-            placeholderTextColor="rgba(255,255,255,0.25)"
+            placeholderTextColor={colors.textFaint}
             secureTextEntry={!showPassword}
             autoCapitalize="none"
             returnKeyType="done"
@@ -127,7 +128,7 @@ export default function LoginScreen() {
             <Ionicons
               name={showPassword ? "eye-off-outline" : "eye-outline"}
               size={20}
-              color="rgba(255,255,255,0.4)"
+              color={colors.textMuted}
             />
           </Pressable>
         </View>
@@ -139,7 +140,7 @@ export default function LoginScreen() {
           activeOpacity={0.8}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.text} />
           ) : (
             <Text style={s.submitTxt}>
               {mode === "signup" ? "Create account" : "Sign in"}
@@ -158,34 +159,33 @@ export default function LoginScreen() {
 const s = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#07080f",
+    backgroundColor: colors.background,
     justifyContent: "center",
     paddingHorizontal: 24,
   },
   top: { alignItems: "center", marginBottom: 40 },
   wordmark: {
-    fontFamily: "serif",
-    fontSize: 42,
-    color: "#fff",
-    fontWeight: "300",
-    letterSpacing: 1,
+    fontFamily: fonts.serif,
+    fontSize: 46,
+    color: colors.text,
+    letterSpacing: -1,
     marginBottom: 8,
   },
   tagline: {
-    color: "rgba(255,255,255,0.4)",
-    fontSize: 14,
+    color: colors.textMuted,
+    fontFamily: fonts.sans, fontSize: 14,
     letterSpacing: 0.3,
   },
   card: {
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: colors.surface,
     borderRadius: 24,
     padding: 24,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
+    borderColor: colors.border,
   },
   toggle: {
     flexDirection: "row",
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 3,
     marginBottom: 24,
@@ -196,34 +196,34 @@ const s = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
   },
-  toggleActive: { backgroundColor: "#a78bfa" },
-  toggleTxt: { color: "rgba(255,255,255,0.45)", fontSize: 14, fontWeight: "600" },
-  toggleTxtActive: { color: "#fff" },
+  toggleActive: { backgroundColor: colors.primary },
+  toggleTxt: { color: colors.textMuted, fontSize: 14, fontFamily: fonts.sansSemiBold },
+  toggleTxtActive: { color: colors.onPrimary },
   errorTxt: {
-    color: "#f87171",
-    fontSize: 13,
+    color: colors.danger,
+    fontFamily: fonts.sans, fontSize: 13,
     marginBottom: 8,
     textAlign: "center",
   },
   label: {
-    color: "rgba(255,255,255,0.45)",
+    color: colors.textMuted,
     fontSize: 11,
-    fontWeight: "600",
+    fontFamily: fonts.sansSemiBold,
     letterSpacing: 0.8,
     textTransform: "uppercase",
     marginBottom: 8,
     marginTop: 12,
   },
   input: {
-    backgroundColor: "rgba(255,255,255,0.07)",
+    backgroundColor: colors.surface,
     borderRadius: 12,
-    color: "#fff",
-    fontSize: 16,
+    color: colors.text,
+    fontFamily: fonts.sans, fontSize: 16,
     paddingHorizontal: 16,
     paddingVertical: 14,
     marginBottom: 4,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
+    borderColor: colors.border,
   },
   passwordRow: {
     flexDirection: "row",
@@ -233,16 +233,16 @@ const s = StyleSheet.create({
   },
   eyeBtn: { padding: 8 },
   submitBtn: {
-    backgroundColor: "#a78bfa",
+    backgroundColor: colors.primary,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: "center",
     marginTop: 24,
   },
-  submitTxt: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  submitTxt: { color: colors.onPrimary, fontSize: 16, fontFamily: fonts.sansBold },
   footer: {
-    color: "rgba(255,255,255,0.2)",
-    fontSize: 11,
+    color: colors.textFaint,
+    fontFamily: fonts.sans, fontSize: 11,
     textAlign: "center",
     marginTop: 24,
     lineHeight: 16,

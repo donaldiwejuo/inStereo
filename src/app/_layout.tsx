@@ -1,4 +1,8 @@
+import { DMSans_400Regular, DMSans_500Medium, DMSans_600SemiBold, DMSans_700Bold } from "@expo-google-fonts/dm-sans";
+import { Newsreader_400Regular, Newsreader_500Medium } from "@expo-google-fonts/newsreader";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFonts } from "expo-font";
+import * as SplashScreen from "expo-splash-screen";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
@@ -6,6 +10,11 @@ import { AuthProvider, useAuth } from "../context/AuthContext";
 import { MembersProvider } from "../context/MembersContext";
 import { createUserProfile, UserProfile, watchUserProfile } from "../lib/firestore";
 import { migrateLegacyStorageKeys } from "../lib/migrateStorage";
+import { colors } from "../theme";
+
+// Keep the splash screen up until fonts and storage are ready, so the first
+// frame already uses the right typefaces.
+SplashScreen.preventAutoHideAsync();
 
 const PENDING_INVITE_KEY = "pendingInviteId";
 
@@ -63,8 +72,8 @@ function AuthGate() {
 
   if (loading || profile === "loading") {
     return (
-      <View style={{ flex: 1, backgroundColor: "#07080f", alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator color="#a78bfa" size="large" />
+      <View style={{ flex: 1, backgroundColor: colors.background, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator color={colors.primary} size="large" />
       </View>
     );
   }
@@ -75,15 +84,23 @@ function AuthGate() {
 export default function RootLayout() {
   // Screens read local storage on mount, so finish renaming legacy keys first.
   const [storageReady, setStorageReady] = useState(false);
+  const [fontsLoaded, fontError] = useFonts({
+    Newsreader_400Regular, Newsreader_500Medium,
+    DMSans_400Regular, DMSans_500Medium, DMSans_600SemiBold, DMSans_700Bold,
+  });
+  // A font failure falls back to system fonts rather than a stuck splash.
+  const fontsReady = fontsLoaded || !!fontError;
   useEffect(() => {
     migrateLegacyStorageKeys()
       .catch((err) => console.warn("[inStereo] Storage migration failed:", err))
       .finally(() => setStorageReady(true));
   }, []);
 
-  if (!storageReady) {
-    return <View style={{ flex: 1, backgroundColor: "#07080f" }} />;
-  }
+  useEffect(() => {
+    if (storageReady && fontsReady) SplashScreen.hideAsync();
+  }, [storageReady, fontsReady]);
+
+  if (!storageReady || !fontsReady) return null;
 
   return (
     <AuthProvider>

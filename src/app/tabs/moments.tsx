@@ -16,6 +16,7 @@ import {
 import { useMembers } from "../../context/MembersContext";
 import { confirmAction } from "../../lib/confirm";
 
+import { cardTints, colors, fonts } from "../../theme";
 type Moment = {
   id: string;
   photoUri: string;
@@ -27,13 +28,7 @@ type MomentsMap = Record<string, Moment[]>;
 
 const STORAGE_KEY = "instereo_moments";
 
-const AVATAR_COLORS = [
-  "#2d3a5a",
-  "#2d4a3e",
-  "#3a2d4a",
-  "#4a3a2d",
-  "#2d4a4a",
-];
+const AVATAR_COLORS = cardTints;
 
 function getAvatarColor(id: number) {
   return AVATAR_COLORS[id % AVATAR_COLORS.length];
@@ -121,7 +116,7 @@ export default function MomentsScreen() {
 
   return (
     <View style={s.root}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="dark-content" />
       <ScrollView
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}
@@ -183,7 +178,7 @@ export default function MomentsScreen() {
                   onPress={() => handleAdd(member.id)}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="add" size={28} color="#a78bfa" />
+                  <Ionicons name="add" size={28} color={colors.primary} />
                 </TouchableOpacity>
               </ScrollView>
             </View>
@@ -212,7 +207,7 @@ export default function MomentsScreen() {
               value={caption}
               onChangeText={setCaption}
               placeholder="Add a caption..."
-              placeholderTextColor="rgba(255,255,255,0.3)"
+              placeholderTextColor={colors.textFaint}
               multiline
             />
             <View style={s.modalActions}>
@@ -245,7 +240,7 @@ export default function MomentsScreen() {
             style={s.closeBtn}
             onPress={() => setViewMoment(null)}
           >
-            <Ionicons name="close" size={24} color="#fff" />
+            <Ionicons name="close" size={24} color={colors.onPrimary} />
           </TouchableOpacity>
           {viewMoment && (
             <>
@@ -267,7 +262,7 @@ export default function MomentsScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#07080f" },
+  root: { flex: 1, backgroundColor: colors.background },
   scroll: { padding: 16, paddingBottom: 100 },
   section: {
     marginBottom: 28,
@@ -277,7 +272,7 @@ const s = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     marginBottom: 12,
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: colors.surface,
     borderRadius: 14,
     padding: 12,
   },
@@ -290,18 +285,18 @@ const s = StyleSheet.create({
     overflow: "hidden",
   },
   avatarInitial: {
-    color: "white",
-    fontWeight: "700",
+    color: colors.text,
+    fontFamily: fonts.sansBold,
     fontSize: 18,
   },
   memberName: {
-    color: "#f0f0f6",
+    color: colors.text,
     fontSize: 16,
-    fontWeight: "700",
+    fontFamily: fonts.sansBold,
   },
   memberRel: {
-    color: "rgba(255,255,255,0.4)",
-    fontSize: 12,
+    color: colors.textMuted,
+    fontFamily: fonts.sans, fontSize: 12,
     marginTop: 2,
   },
   photoRow: {
@@ -323,10 +318,10 @@ const s = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 2,
     borderStyle: "dashed",
-    borderColor: "rgba(167,139,250,0.5)",
+    borderColor: colors.accent,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(167,139,250,0.06)",
+    backgroundColor: "#E3E8E3",
   },
   emptyInline: {
     height: 80,
@@ -335,8 +330,8 @@ const s = StyleSheet.create({
     marginRight: 8,
   },
   emptyInlineText: {
-    color: "rgba(255,255,255,0.3)",
-    fontSize: 13,
+    color: colors.textFaint,
+    fontFamily: fonts.sans, fontSize: 13,
     fontStyle: "italic",
     maxWidth: 160,
     textAlign: "center",
@@ -348,7 +343,7 @@ const s = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalSheet: {
-    backgroundColor: "#0f0f1e",
+    backgroundColor: colors.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
@@ -360,12 +355,12 @@ const s = StyleSheet.create({
     borderRadius: 16,
   },
   captionInput: {
-    backgroundColor: "rgba(255,255,255,0.07)",
+    backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    color: "#f0f0f6",
-    fontSize: 15,
+    borderColor: colors.border,
+    color: colors.text,
+    fontFamily: fonts.sans, fontSize: 15,
     padding: 13,
     minHeight: 60,
   },
@@ -376,25 +371,25 @@ const s = StyleSheet.create({
   },
   cancelBtn: {
     flex: 1,
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: colors.surface,
     borderRadius: 14,
     padding: 15,
     alignItems: "center",
   },
   cancelText: {
-    color: "rgba(255,255,255,0.6)",
-    fontWeight: "600",
+    color: colors.textMuted,
+    fontFamily: fonts.sansSemiBold,
   },
   saveBtn: {
     flex: 1,
-    backgroundColor: "#7c6af7",
+    backgroundColor: colors.primary,
     borderRadius: 14,
     padding: 15,
     alignItems: "center",
   },
   saveText: {
-    color: "white",
-    fontWeight: "700",
+    color: colors.onPrimary,
+    fontFamily: fonts.sansBold,
   },
   // View photo modal
   viewOverlay: {
@@ -408,7 +403,7 @@ const s = StyleSheet.create({
     position: "absolute",
     top: 56,
     right: 20,
-    backgroundColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "rgba(255,255,255,0.2)",
     borderRadius: 20,
     width: 40,
     height: 40,
@@ -421,15 +416,15 @@ const s = StyleSheet.create({
     borderRadius: 16,
   },
   viewCaption: {
-    color: "#f0f0f6",
+    color: colors.onPrimary,
     fontSize: 15,
     textAlign: "center",
     marginTop: 16,
-    fontWeight: "500",
+    fontFamily: fonts.sansMedium,
   },
   viewDate: {
-    color: "rgba(255,255,255,0.35)",
-    fontSize: 12,
+    color: "rgba(255,255,255,0.6)",
+    fontFamily: fonts.sans, fontSize: 12,
     marginTop: 8,
   },
 });

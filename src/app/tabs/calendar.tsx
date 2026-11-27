@@ -25,6 +25,8 @@ import { useAuth } from "../../context/AuthContext";
 import { confirmAction, notifyMessage } from "../../lib/confirm";
 import { SharedCalendarEvent, updateUserProfile } from "../../lib/firestore";
 
+import { ScreenHeading } from "../../components/ui";
+import { colors, fonts } from "../../theme";
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -50,12 +52,12 @@ const STORAGE_KEY = "instereo_calendar";
 const VISIBILITY_KEY = "instereo_calendar_visibility";
 
 const EVENT_COLORS = [
-  "#7c6af7",
-  "#f472b6",
-  "#34d399",
-  "#60a5fa",
-  "#fbbf24",
-  "#f87171",
+  colors.primary,
+  "#7D6E8F", // lavender
+  colors.accent,
+  "#5B7A8C", // blue-grey
+  colors.warm,
+  colors.danger,
 ];
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -78,8 +80,8 @@ const GRID_START_HOUR = 6;
 const GRID_END_HOUR = 23;
 const HOUR_HEIGHT = 60;
 const TIME_COL_WIDTH = 44;
-const ACCENT = "#a78bfa";
-const BG = "#07080f";
+const ACCENT = colors.primary;
+const BG = colors.background;
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const DAY_COL_WIDTH = (SCREEN_WIDTH - TIME_COL_WIDTH) / 7;
@@ -167,7 +169,7 @@ function redactForSharing(events: CalendarEvent[], visibility: CalendarVisibilit
   if (visibility === "hidden") return [];
   if (visibility === "availability") {
     return events.map((e) => ({
-      id: e.id, title: "Busy", date: e.date, startTime: e.startTime, endTime: e.endTime, color: "#6b7280",
+      id: e.id, title: "Busy", date: e.date, startTime: e.startTime, endTime: e.endTime, color: colors.textFaint,
     }));
   }
   return events.map((e) => ({
@@ -310,7 +312,7 @@ function TimePicker({
           onPress={() => update(h12 - 1, m, isPM)}
           hitSlop={HIT}
         >
-          <Ionicons name="remove" size={16} color="#fff" />
+          <Ionicons name="remove" size={16} color={colors.text} />
         </TouchableOpacity>
         <Text style={tp.val}>{String(h12).padStart(2, "0")}</Text>
         <TouchableOpacity
@@ -318,7 +320,7 @@ function TimePicker({
           onPress={() => update(h12 + 1, m, isPM)}
           hitSlop={HIT}
         >
-          <Ionicons name="add" size={16} color="#fff" />
+          <Ionicons name="add" size={16} color={colors.text} />
         </TouchableOpacity>
 
         <Text style={tp.colon}>:</Text>
@@ -328,7 +330,7 @@ function TimePicker({
           onPress={() => update(h12, m - 5, isPM)}
           hitSlop={HIT}
         >
-          <Ionicons name="remove" size={16} color="#fff" />
+          <Ionicons name="remove" size={16} color={colors.text} />
         </TouchableOpacity>
         <Text style={tp.val}>{String(m).padStart(2, "0")}</Text>
         <TouchableOpacity
@@ -336,7 +338,7 @@ function TimePicker({
           onPress={() => update(h12, m + 5, isPM)}
           hitSlop={HIT}
         >
-          <Ionicons name="add" size={16} color="#fff" />
+          <Ionicons name="add" size={16} color={colors.text} />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -352,32 +354,32 @@ function TimePicker({
 
 const tp = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", marginBottom: 14 },
-  label: { color: "rgba(255,255,255,0.5)", fontSize: 13, width: 52 },
+  label: { color: colors.textMuted, fontFamily: fonts.sans, fontSize: 13, width: 52 },
   controls: { flexDirection: "row", alignItems: "center", gap: 6 },
   btn: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.1)",
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
   val: {
-    color: "#fff",
+    color: colors.text,
     fontSize: 20,
-    fontWeight: "700",
+    fontFamily: fonts.sansBold,
     width: 28,
     textAlign: "center",
   },
-  colon: { color: "#fff", fontSize: 20, fontWeight: "700", marginHorizontal: 2 },
+  colon: { color: colors.text, fontSize: 20, fontFamily: fonts.sansBold, marginHorizontal: 2 },
   ampmBtn: {
-    backgroundColor: "#7c6af7",
+    backgroundColor: colors.primary,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 5,
     marginLeft: 4,
   },
-  ampmTxt: { color: "#fff", fontSize: 12, fontWeight: "800", letterSpacing: 0.5 },
+  ampmTxt: { color: colors.text, fontSize: 12, fontFamily: fonts.sansBold, letterSpacing: 0.5 },
 });
 
 // ---------------------------------------------------------------------------
@@ -442,31 +444,31 @@ function DatePickerModal({
             <View style={dpm.col}>
               <Text style={dpm.colLabel}>Month</Text>
               <TouchableOpacity onPress={() => adj(setMonth, month, -1, 0, 11)} style={dpm.arrow}>
-                <Ionicons name="chevron-up" size={20} color="#fff" />
+                <Ionicons name="chevron-up" size={20} color={colors.text} />
               </TouchableOpacity>
               <Text style={dpm.val}>{MONTH_NAMES[month].slice(0, 3)}</Text>
               <TouchableOpacity onPress={() => adj(setMonth, month, 1, 0, 11)} style={dpm.arrow}>
-                <Ionicons name="chevron-down" size={20} color="#fff" />
+                <Ionicons name="chevron-down" size={20} color={colors.text} />
               </TouchableOpacity>
             </View>
             <View style={dpm.col}>
               <Text style={dpm.colLabel}>Day</Text>
               <TouchableOpacity onPress={() => adj(setDay, clampedDay, -1, 1, daysInMonth)} style={dpm.arrow}>
-                <Ionicons name="chevron-up" size={20} color="#fff" />
+                <Ionicons name="chevron-up" size={20} color={colors.text} />
               </TouchableOpacity>
               <Text style={dpm.val}>{String(clampedDay).padStart(2, "0")}</Text>
               <TouchableOpacity onPress={() => adj(setDay, clampedDay, 1, 1, daysInMonth)} style={dpm.arrow}>
-                <Ionicons name="chevron-down" size={20} color="#fff" />
+                <Ionicons name="chevron-down" size={20} color={colors.text} />
               </TouchableOpacity>
             </View>
             <View style={dpm.col}>
               <Text style={dpm.colLabel}>Year</Text>
               <TouchableOpacity onPress={() => adj(setYear, year, -1, 2020, 2035)} style={dpm.arrow}>
-                <Ionicons name="chevron-up" size={20} color="#fff" />
+                <Ionicons name="chevron-up" size={20} color={colors.text} />
               </TouchableOpacity>
               <Text style={dpm.val}>{year}</Text>
               <TouchableOpacity onPress={() => adj(setYear, year, 1, 2020, 2035)} style={dpm.arrow}>
-                <Ionicons name="chevron-down" size={20} color="#fff" />
+                <Ionicons name="chevron-down" size={20} color={colors.text} />
               </TouchableOpacity>
             </View>
           </View>
@@ -492,34 +494,34 @@ const dpm = StyleSheet.create({
     justifyContent: "center",
   },
   box: {
-    backgroundColor: "#1a1b2e",
+    backgroundColor: colors.background,
     borderRadius: 20,
     padding: 24,
     width: 320,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: colors.border,
   },
   title: {
-    color: "#fff",
+    color: colors.text,
     fontSize: 17,
-    fontWeight: "700",
+    fontFamily: fonts.sansBold,
     textAlign: "center",
     marginBottom: 20,
   },
   row: { flexDirection: "row", justifyContent: "space-around", marginBottom: 24 },
   col: { alignItems: "center", gap: 4 },
   colLabel: {
-    color: "rgba(255,255,255,0.4)",
-    fontSize: 11,
+    color: colors.textMuted,
+    fontFamily: fonts.sans, fontSize: 11,
     marginBottom: 4,
     textTransform: "uppercase",
     letterSpacing: 0.8,
   },
   arrow: { padding: 4 },
   val: {
-    color: "#fff",
+    color: colors.text,
     fontSize: 22,
-    fontWeight: "700",
+    fontFamily: fonts.sansBold,
     minWidth: 52,
     textAlign: "center",
     paddingVertical: 4,
@@ -529,10 +531,10 @@ const dpm = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.08)",
+    backgroundColor: colors.surface,
     alignItems: "center",
   },
-  cancelTxt: { color: "rgba(255,255,255,0.7)", fontSize: 15, fontWeight: "600" },
+  cancelTxt: { color: colors.text, fontSize: 15, fontFamily: fonts.sansSemiBold },
   confirmBtn: {
     flex: 1,
     paddingVertical: 12,
@@ -540,7 +542,7 @@ const dpm = StyleSheet.create({
     backgroundColor: ACCENT,
     alignItems: "center",
   },
-  confirmTxt: { color: "#fff", fontSize: 15, fontWeight: "700" },
+  confirmTxt: { color: colors.onPrimary, fontSize: 15, fontFamily: fonts.sansBold },
 });
 
 // ---------------------------------------------------------------------------
@@ -655,7 +657,7 @@ function EventModal({
               value={title}
               onChangeText={setTitle}
               placeholder="Event title"
-              placeholderTextColor="rgba(255,255,255,0.3)"
+              placeholderTextColor={colors.textFaint}
               maxLength={80}
               returnKeyType="done"
             />
@@ -667,7 +669,7 @@ function EventModal({
             >
               <Ionicons name="calendar-outline" size={16} color={ACCENT} style={{ marginRight: 8 }} />
               <Text style={em.dateText}>{formatDate(date)}</Text>
-              <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.3)" />
+              <Ionicons name="chevron-forward" size={14} color={colors.textFaint} />
             </TouchableOpacity>
 
             <Text style={em.fieldLabel}>Time</Text>
@@ -682,7 +684,7 @@ function EventModal({
                   onPress={() => setColor(c)}
                   style={[em.swatch, { backgroundColor: c }, color === c && em.swatchSelected]}
                 >
-                  {color === c && <Ionicons name="checkmark" size={14} color="#fff" />}
+                  {color === c && <Ionicons name="checkmark" size={14} color={colors.onPrimary} />}
                 </TouchableOpacity>
               ))}
             </View>
@@ -693,7 +695,7 @@ function EventModal({
               value={notes}
               onChangeText={setNotes}
               placeholder="Add notes…"
-              placeholderTextColor="rgba(255,255,255,0.3)"
+              placeholderTextColor={colors.textFaint}
               multiline
               numberOfLines={3}
               maxLength={500}
@@ -702,7 +704,7 @@ function EventModal({
             <View style={em.actions}>
               {mode === "edit" && (
                 <TouchableOpacity style={em.deleteBtn} onPress={handleDelete}>
-                  <Ionicons name="trash-outline" size={18} color="#f87171" />
+                  <Ionicons name="trash-outline" size={18} color={colors.danger} />
                 </TouchableOpacity>
               )}
               <TouchableOpacity style={em.cancelBtn} onPress={onCancel}>
@@ -722,80 +724,80 @@ function EventModal({
 const em = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" },
   sheet: {
-    backgroundColor: "#0e0f1e",
+    backgroundColor: colors.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 20,
     paddingBottom: Platform.OS === "ios" ? 36 : 24,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
+    borderColor: colors.border,
   },
   handle: {
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: colors.border,
     alignSelf: "center",
     marginBottom: 16,
   },
-  heading: { color: "#fff", fontSize: 18, fontWeight: "700", marginBottom: 20, textAlign: "center" },
+  heading: { color: colors.text, fontSize: 18, fontFamily: fonts.sansBold, marginBottom: 20, textAlign: "center" },
   fieldLabel: {
-    color: "rgba(255,255,255,0.45)",
+    color: colors.textMuted,
     fontSize: 11,
-    fontWeight: "600",
+    fontFamily: fonts.sansSemiBold,
     letterSpacing: 0.8,
     textTransform: "uppercase",
     marginBottom: 6,
     marginTop: 4,
   },
   input: {
-    backgroundColor: "rgba(255,255,255,0.07)",
+    backgroundColor: colors.surface,
     borderRadius: 12,
-    color: "#fff",
-    fontSize: 15,
+    color: colors.text,
+    fontFamily: fonts.sans, fontSize: 15,
     paddingHorizontal: 14,
     paddingVertical: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
+    borderColor: colors.border,
   },
   inputMulti: { height: 72, textAlignVertical: "top" },
   dateRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.07)",
+    backgroundColor: colors.surface,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
+    borderColor: colors.border,
   },
-  dateText: { color: "#fff", fontSize: 15, flex: 1 },
+  dateText: { color: colors.text, fontFamily: fonts.sans, fontSize: 15, flex: 1 },
   colorRow: { flexDirection: "row", gap: 12, marginBottom: 12 },
   swatch: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
-  swatchSelected: { borderWidth: 2, borderColor: "#fff" },
+  swatchSelected: { borderWidth: 2, borderColor: colors.border },
   actions: { flexDirection: "row", gap: 10, marginTop: 8, alignItems: "center" },
   deleteBtn: {
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: "rgba(248,113,113,0.12)",
+    backgroundColor: "#F3E3E0",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(248,113,113,0.25)",
+    borderColor: colors.danger,
   },
   cancelBtn: {
     flex: 1,
     paddingVertical: 14,
     borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.08)",
+    backgroundColor: colors.surface,
     alignItems: "center",
   },
-  cancelTxt: { color: "rgba(255,255,255,0.7)", fontSize: 15, fontWeight: "600" },
+  cancelTxt: { color: colors.text, fontSize: 15, fontFamily: fonts.sansSemiBold },
   saveBtn: { flex: 2, paddingVertical: 14, borderRadius: 14, backgroundColor: ACCENT, alignItems: "center" },
-  saveTxt: { color: "#fff", fontSize: 15, fontWeight: "700" },
+  saveTxt: { color: colors.onPrimary, fontSize: 15, fontFamily: fonts.sansBold },
 });
 
 // ---------------------------------------------------------------------------
@@ -834,7 +836,7 @@ function WeekHeader({ weekDays, todayStr, onPrev, onNext }: WeekHeaderProps) {
           onPress={onPrev}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name="chevron-back" size={20} color="rgba(255,255,255,0.8)" />
+          <Ionicons name="chevron-back" size={20} color={colors.text} />
         </TouchableOpacity>
         <Text style={wh.monthLabel}>{monthLabel}</Text>
         <TouchableOpacity
@@ -842,7 +844,7 @@ function WeekHeader({ weekDays, todayStr, onPrev, onNext }: WeekHeaderProps) {
           onPress={onNext}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.8)" />
+          <Ionicons name="chevron-forward" size={20} color={colors.text} />
         </TouchableOpacity>
       </View>
       <View style={wh.daysRow}>
@@ -854,7 +856,7 @@ function WeekHeader({ weekDays, todayStr, onPrev, onNext }: WeekHeaderProps) {
             <View key={i} style={wh.dayCol}>
               <Text style={wh.dayName}>{DAY_LABELS[i]}</Text>
               <View style={[wh.dateBubble, isToday && { backgroundColor: ACCENT }]}>
-                <Text style={[wh.dateNum, isToday && { color: "#fff", fontWeight: "800" }]}>
+                <Text style={[wh.dateNum, isToday && { color: colors.onPrimary, fontFamily: fonts.sansBold }]}>
                   {d.getDate()}
                 </Text>
               </View>
@@ -870,8 +872,8 @@ const wh = StyleSheet.create({
   container: {
     backgroundColor: BG,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.08)",
-    paddingTop: Platform.OS === "ios" ? 48 : 24,
+    borderBottomColor: colors.border,
+    paddingTop: 4,
   },
   monthRow: {
     flexDirection: "row",
@@ -884,22 +886,22 @@ const wh = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
-  monthLabel: { color: "#fff", fontSize: 15, fontWeight: "700", letterSpacing: 0.3 },
+  monthLabel: { color: colors.text, fontSize: 15, fontFamily: fonts.sansBold, letterSpacing: 0.3 },
   daysRow: { flexDirection: "row", paddingBottom: 8 },
   dayCol: { width: DAY_COL_WIDTH, alignItems: "center", gap: 2 },
   dayName: {
-    color: "rgba(255,255,255,0.45)",
+    color: colors.textMuted,
     fontSize: 11,
-    fontWeight: "600",
+    fontFamily: fonts.sansSemiBold,
     letterSpacing: 0.5,
     textTransform: "uppercase",
   },
   dateBubble: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center" },
-  dateNum: { color: "rgba(255,255,255,0.85)", fontSize: 14, fontWeight: "600" },
+  dateNum: { color: colors.text, fontSize: 14, fontFamily: fonts.sansSemiBold },
 });
 
 // ---------------------------------------------------------------------------
@@ -962,7 +964,7 @@ function EventBlock({ event, col, totalCols, onPress }: EventBlockProps) {
     <TouchableOpacity
       style={[
         eb.block,
-        { top, height, width: slotWidth, left, backgroundColor: event.color + "D9", borderLeftColor: event.color },
+        { top, height, width: slotWidth, left, backgroundColor: event.color + "26", borderLeftColor: event.color },
       ]}
       onPress={() => onPress(event)}
       activeOpacity={0.75}
@@ -980,14 +982,14 @@ function EventBlock({ event, col, totalCols, onPress }: EventBlockProps) {
 const eb = StyleSheet.create({
   block: {
     position: "absolute",
-    borderRadius: 6,
+    borderRadius: 8,
     borderLeftWidth: 3,
     paddingHorizontal: 5,
     paddingVertical: 3,
     overflow: "hidden",
   },
-  title: { color: "#fff", fontSize: 12, fontWeight: "700", lineHeight: 15 },
-  time: { color: "rgba(255,255,255,0.75)", fontSize: 10, marginTop: 1 },
+  title: { color: colors.text, fontSize: 12, fontFamily: fonts.sansBold, lineHeight: 15 },
+  time: { color: colors.text, fontFamily: fonts.sans, fontSize: 10, marginTop: 1 },
 });
 
 // ---------------------------------------------------------------------------
@@ -1030,7 +1032,7 @@ function TimeGrid({ weekDays, events, onPressSlot, onPressEvent }: TimeGridProps
       ref={scrollRef}
       style={tg.scroll}
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: 40 }}
+      contentContainerStyle={{ paddingBottom: 120 }}
     >
       <View style={{ height: totalHeight, flexDirection: "row" }}>
         <View style={tg.timeCol}>
@@ -1086,9 +1088,9 @@ const tg = StyleSheet.create({
     paddingRight: 6,
     alignItems: "flex-end",
   },
-  hourLabel: { color: "rgba(255,255,255,0.3)", fontSize: 10, fontWeight: "500" },
-  dayCol: { borderLeftWidth: 1, borderLeftColor: "rgba(255,255,255,0.06)", position: "relative" },
-  hourSlot: { height: HOUR_HEIGHT, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)" },
+  hourLabel: { color: colors.textFaint, fontSize: 10, fontFamily: fonts.sansMedium },
+  dayCol: { borderLeftWidth: 1, borderLeftColor: colors.border, position: "relative" },
+  hourSlot: { height: HOUR_HEIGHT, borderTopWidth: 1, borderTopColor: colors.border },
 });
 
 // ---------------------------------------------------------------------------
@@ -1154,7 +1156,7 @@ function VisibilitySettingsModal({
                   <Ionicons
                     name={opt.icon as any}
                     size={20}
-                    color={selected ? "#fff" : "rgba(255,255,255,0.5)"}
+                    color={selected ? colors.text : colors.textMuted}
                   />
                 </View>
                 <View style={vm.optText}>
@@ -1177,24 +1179,24 @@ function VisibilitySettingsModal({
 const vm = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" },
   sheet: {
-    backgroundColor: "#0e0f1e",
+    backgroundColor: colors.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 20,
     paddingBottom: Platform.OS === "ios" ? 36 : 24,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
+    borderColor: colors.border,
   },
   handle: {
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: colors.border,
     alignSelf: "center",
     marginBottom: 20,
   },
-  title: { color: "#fff", fontSize: 18, fontWeight: "700", marginBottom: 6 },
-  subtitle: { color: "rgba(255,255,255,0.45)", fontSize: 13, marginBottom: 20, lineHeight: 18 },
+  title: { color: colors.text, fontSize: 18, fontFamily: fonts.sansBold, marginBottom: 6 },
+  subtitle: { color: colors.textMuted, fontFamily: fonts.sans, fontSize: 13, marginBottom: 20, lineHeight: 18 },
   option: {
     flexDirection: "row",
     alignItems: "center",
@@ -1202,32 +1204,32 @@ const vm = StyleSheet.create({
     padding: 14,
     borderRadius: 14,
     marginBottom: 10,
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.07)",
+    borderColor: colors.border,
   },
-  optionSelected: { backgroundColor: "rgba(167,139,250,0.1)", borderColor: ACCENT },
+  optionSelected: { backgroundColor: "#E3E8E3", borderColor: ACCENT },
   iconWrap: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.08)",
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
   iconWrapSelected: { backgroundColor: ACCENT },
   optText: { flex: 1 },
-  optTitle: { color: "rgba(255,255,255,0.85)", fontSize: 15, fontWeight: "600" },
-  optTitleSelected: { color: "#fff" },
-  optDesc: { color: "rgba(255,255,255,0.4)", fontSize: 12, marginTop: 2, lineHeight: 16 },
+  optTitle: { color: colors.text, fontSize: 15, fontFamily: fonts.sansSemiBold },
+  optTitleSelected: { color: colors.text },
+  optDesc: { color: colors.textMuted, fontFamily: fonts.sans, fontSize: 12, marginTop: 2, lineHeight: 16 },
   doneBtn: {
     marginTop: 8,
     paddingVertical: 14,
     borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.08)",
+    backgroundColor: colors.surface,
     alignItems: "center",
   },
-  doneTxt: { color: "rgba(255,255,255,0.7)", fontSize: 15, fontWeight: "600" },
+  doneTxt: { color: colors.text, fontSize: 15, fontFamily: fonts.sansSemiBold },
 });
 
 // ---------------------------------------------------------------------------
@@ -1275,7 +1277,7 @@ function SyncHelpModal({
             ))}
           </View>
           <TouchableOpacity style={shm.connectBtn} onPress={onConnect}>
-            <Ionicons name="link" size={16} color="#fff" style={{ marginRight: 8 }} />
+            <Ionicons name="link" size={16} color={colors.onPrimary} style={{ marginRight: 8 }} />
             <Text style={shm.connectTxt}>I've done this — Connect Calendar</Text>
           </TouchableOpacity>
           <TouchableOpacity style={shm.laterBtn} onPress={onCancel}>
@@ -1290,19 +1292,19 @@ function SyncHelpModal({
 const shm = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
   sheet: {
-    backgroundColor: "#0e0f1e",
+    backgroundColor: colors.background,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     padding: 24,
     paddingBottom: Platform.OS === "ios" ? 44 : 28,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
+    borderColor: colors.border,
   },
   handle: {
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: colors.border,
     alignSelf: "center",
     marginBottom: 24,
   },
@@ -1310,37 +1312,37 @@ const shm = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 22,
-    backgroundColor: "rgba(167,139,250,0.12)",
+    backgroundColor: "#E3E8E3",
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "center",
     borderWidth: 1,
-    borderColor: "rgba(167,139,250,0.25)",
+    borderColor: colors.accent,
     marginBottom: 18,
   },
   title: {
-    color: "#fff",
+    color: colors.text,
     fontSize: 21,
-    fontWeight: "800",
+    fontFamily: fonts.sansBold,
     textAlign: "center",
     marginBottom: 10,
     letterSpacing: 0.2,
   },
   subtitle: {
-    color: "rgba(255,255,255,0.5)",
-    fontSize: 14,
+    color: colors.textMuted,
+    fontFamily: fonts.sans, fontSize: 14,
     lineHeight: 21,
     textAlign: "center",
     marginBottom: 24,
   },
   stepsCard: {
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: colors.surface,
     borderRadius: 18,
     padding: 18,
     gap: 14,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.07)",
+    borderColor: colors.border,
   },
   stepRow: { flexDirection: "row", alignItems: "center", gap: 14 },
   stepBadge: {
@@ -1352,8 +1354,8 @@ const shm = StyleSheet.create({
     justifyContent: "center",
     flexShrink: 0,
   },
-  stepNum: { color: "#fff", fontSize: 13, fontWeight: "800" },
-  stepTxt: { color: "rgba(255,255,255,0.85)", fontSize: 14, flex: 1, lineHeight: 20 },
+  stepNum: { color: colors.onPrimary, fontSize: 13, fontFamily: fonts.sansBold },
+  stepTxt: { color: colors.text, fontFamily: fonts.sans, fontSize: 14, flex: 1, lineHeight: 20 },
   connectBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -1363,9 +1365,9 @@ const shm = StyleSheet.create({
     paddingVertical: 17,
     marginBottom: 12,
   },
-  connectTxt: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  connectTxt: { color: colors.onPrimary, fontSize: 16, fontFamily: fonts.sansBold },
   laterBtn: { alignItems: "center", paddingVertical: 10 },
-  laterTxt: { color: "rgba(255,255,255,0.35)", fontSize: 14 },
+  laterTxt: { color: colors.textFaint, fontFamily: fonts.sans, fontSize: 14 },
 });
 
 // ---------------------------------------------------------------------------
@@ -1408,7 +1410,7 @@ function DeviceSyncBanner({
         <Ionicons
           name="calendar"
           size={16}
-          color={synced ? "#34d399" : "rgba(255,255,255,0.4)"}
+          color={synced ? colors.accent : colors.textMuted}
         />
         {loading ? (
           <>
@@ -1440,7 +1442,7 @@ function DeviceSyncBanner({
           color={ACCENT}
         />
         <Text style={dsb.visTxt}>{VIS_LABEL[visibility]}</Text>
-        <Ionicons name="chevron-forward" size={11} color="rgba(167,139,250,0.6)" />
+        <Ionicons name="chevron-forward" size={11} color={colors.primary} />
       </TouchableOpacity>
     </View>
   );
@@ -1453,24 +1455,24 @@ const dsb = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 12,
     paddingVertical: 7,
-    backgroundColor: "rgba(255,255,255,0.03)",
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.06)",
+    borderBottomColor: colors.border,
   },
   left: { flexDirection: "row", alignItems: "center", gap: 7 },
-  dot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: "#34d399" },
-  connTxt: { color: "rgba(255,255,255,0.75)", fontSize: 12, fontWeight: "600" },
-  disconnTxt: { color: "rgba(255,255,255,0.45)", fontSize: 12, fontWeight: "500" },
+  dot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.accent },
+  connTxt: { color: colors.text, fontSize: 12, fontFamily: fonts.sansSemiBold },
+  disconnTxt: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.sansMedium },
   visBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: "rgba(167,139,250,0.1)",
+    backgroundColor: "#E3E8E3",
     borderRadius: 8,
     paddingHorizontal: 9,
     paddingVertical: 5,
   },
-  visTxt: { color: ACCENT, fontSize: 11, fontWeight: "600" },
+  visTxt: { color: ACCENT, fontSize: 11, fontFamily: fonts.sansSemiBold },
 });
 
 // ---------------------------------------------------------------------------
@@ -1728,7 +1730,8 @@ export default function CalendarScreen() {
 
   return (
     <View style={s.root}>
-      <StatusBar barStyle="light-content" backgroundColor={BG} />
+      <StatusBar barStyle="dark-content" backgroundColor={BG} />
+      <ScreenHeading eyebrow="Shared availability" title="Find a moment that works." />
 
       <WeekHeader
         weekDays={weekDays}
