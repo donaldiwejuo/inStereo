@@ -12,6 +12,9 @@
       "icon": "./assets/images/icon.png",
       "config": {
         "usesNonExemptEncryption": false
+      },
+      "runtimeVersion": {
+        "policy": "fingerprint"
       }
     },
     "android": {
@@ -28,7 +31,9 @@
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.FOREGROUND_SERVICE",
-        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
     "web": {
@@ -87,6 +92,9 @@
         "projectId": "d76f0998-653d-40d7-86e2-273a293e1a5e"
       }
     },
-    "owner": "diwejuo"
+    "owner": "diwejuo",
+    "updates": {
+      "url": "https://u.expo.dev/d76f0998-653d-40d7-86e2-273a293e1a5e"
+    }
   }
 }
