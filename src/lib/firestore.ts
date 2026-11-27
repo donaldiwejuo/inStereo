@@ -333,10 +333,20 @@ export async function setConnectionPhoto(connectionId: string, uid: string, url:
 
 // Stamped each time `uid` sends a chat message, so Home can show
 // "You last messaged them 3 days ago" without querying every chat.
-export async function markMessaged(connectionId: string, uid: string): Promise<void> {
+// `at` back-fills a time found in the chat history; otherwise "now".
+export async function markMessaged(connectionId: string, uid: string, at?: Date): Promise<void> {
   await updateDoc(doc(db, "connections", connectionId), {
-    [`lastMessagedAt.${uid}`]: serverTimestamp(),
+    [`lastMessagedAt.${uid}`]: at ? Timestamp.fromDate(at) : serverTimestamp(),
   });
+}
+
+// When `uid` last sent a message in this chat, looking at the most recent
+// 100 messages (no extra index needed). Used once to back-fill check-ins
+// from before they were tracked.
+export async function findLastSentAt(chatId: string, uid: string): Promise<Date | null> {
+  const snap = await getDocs(query(collection(db, "chats", chatId, "messages"), orderBy("timestamp", "desc"), limit(100)));
+  const mine = snap.docs.find((d) => d.data().senderId === uid);
+  return mine?.data().timestamp?.toDate?.() ?? null;
 }
 
 export function watchConnections(uid: string, cb: (c: Connection[]) => void) {

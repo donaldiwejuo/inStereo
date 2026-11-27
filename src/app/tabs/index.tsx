@@ -7,7 +7,7 @@ import PersonDetail from "../../components/PersonDetail";
 import { Avatar } from "../../components/ui";
 import { useAuth } from "../../context/AuthContext";
 import { Member, useMembers } from "../../context/MembersContext";
-import { UserProfile, watchUserProfile } from "../../lib/firestore";
+import { chatIdFor, findLastSentAt, markMessaged, UserProfile, watchUserProfile } from "../../lib/firestore";
 import { notifyBirthday } from "../../lib/notifications";
 import { reachStatus, safeTimezone } from "../../lib/presence";
 import { colors, fonts, radius, space, tintFor, type } from "../../theme";
@@ -26,18 +26,21 @@ function weatherCodeInfo(code: number): { icon: IconName; label: string; severe:
   return { icon: "partly-sunny-outline", label: "", severe: false };
 }
 
-// "You messaged 3 days ago" — a gentle nudge when it's been a while.
-function lastMessagedLabel(at: Date | undefined, now: Date): string {
-  if (!at) return "You haven't messaged yet";
-  const mins = Math.floor((now.getTime() - at.getTime()) / 60_000);
-  if (mins < 1) return "You messaged just now";
-  if (mins < 60) return `You messaged ${mins} min ago`;
+// "You checked in 3 weeks ago": when you last messaged them in Chat.
+function checkedInLabel(at: Date | undefined, now: Date): string {
+  if (!at) return "You haven't checked in yet";
+  const mins = Math.max(0, Math.floor((now.getTime() - at.getTime()) / 60_000));
+  const ago = (n: number, unit: string) => `You checked in ${n} ${unit}${n === 1 ? "" : "s"} ago`;
+  if (mins < 1) return "You checked in just now";
+  if (mins < 60) return ago(mins, "minute");
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `You messaged ${hours} ${hours === 1 ? "hour" : "hours"} ago`;
+  if (hours < 24) return ago(hours, "hour");
   const days = Math.floor(hours / 24);
-  if (days === 1) return "You messaged yesterday";
-  if (days < 30) return `You messaged ${days} days ago`;
-  return `You messaged on ${at.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+  if (days === 1) return "You checked in yesterday";
+  if (days < 7) return ago(days, "day");
+  if (days < 30) return ago(Math.floor(days / 7), "week");
+  if (days < 365) return ago(Math.floor(days / 30), "month");
+  return ago(Math.floor(days / 365), "year");
 }
 
 function greeting(now: Date): string {
@@ -89,8 +92,25 @@ function useWeather(member: Member): Weather | null {
   return weather;
 }
 
+// Connections already looked up this session, so the back-fill runs once each.
+const backfilled = new Set<string>();
+
+// Check-ins are recorded as you send messages. For older chats, find your
+// last message once and save it, so the card isn't stuck on "not yet".
+function useBackfillCheckIn(member: Member) {
+  const { user } = useAuth();
+  useEffect(() => {
+    if (!user || member.lastMessagedAt || backfilled.has(member.connectionId)) return;
+    backfilled.add(member.connectionId);
+    findLastSentAt(chatIdFor(user.uid, member.uid), user.uid)
+      .then((at) => (at ? markMessaged(member.connectionId, user.uid, at) : undefined))
+      .catch(() => {});
+  }, [user, member.lastMessagedAt, member.connectionId, member.uid]);
+}
+
 function PersonCard({ member, now, onPress }: { member: Member; now: Date; onPress: () => void }) {
   const weather = useWeather(member);
+  useBackfillCheckIn(member);
   const tz = safeTimezone(member.timezone);
   const parts = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit", hour12: true })
     .formatToParts(now);
@@ -105,7 +125,7 @@ function PersonCard({ member, now, onPress }: { member: Member; now: Date; onPre
       onPress={onPress}
       activeOpacity={0.85}
       accessibilityRole="button"
-      accessibilityLabel={`${member.name}, ${clock} ${ampm} in ${member.city}. ${status.label}. ${lastMessagedLabel(member.lastMessagedAt, now)}`}
+      accessibilityLabel={`${member.name}, ${clock} ${ampm} in ${member.city}. ${status.label}. ${checkedInLabel(member.lastMessagedAt, now)}`}
     >
       <View style={s.cardTop}>
         <Avatar person={member} size={52} ring />
@@ -140,7 +160,7 @@ function PersonCard({ member, now, onPress }: { member: Member; now: Date; onPre
         </View>
         <View style={{ flex: 1 }}>
           <Text style={s.status}>{status.label}</Text>
-          <Text style={s.lastMessaged}>{lastMessagedLabel(member.lastMessagedAt, now)}</Text>
+          <Text style={s.checkedIn}>{checkedInLabel(member.lastMessagedAt, now)}</Text>
         </View>
         <Ionicons name="arrow-forward" size={20} color={colors.textMuted} />
       </View>
@@ -258,7 +278,7 @@ const s = StyleSheet.create({
   dotHalo: { width: 16, height: 16, borderRadius: 8, alignItems: "center", justifyContent: "center", alignSelf: "flex-start", marginTop: 2 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   status: { fontFamily: fonts.sansSemiBold, fontSize: 15, color: colors.text },
-  lastMessaged: { fontFamily: fonts.sans, fontSize: 13, color: colors.textMuted, marginTop: 2 },
+  checkedIn: { fontFamily: fonts.sans, fontSize: 13, color: colors.textMuted, marginTop: 2 },
   empty: { alignItems: "center", gap: 12, paddingVertical: 40, paddingHorizontal: 20 },
   emptyTitle: { fontFamily: fonts.serif, fontSize: 24, color: colors.text },
   emptyBtn: { marginTop: 8, backgroundColor: colors.primary, borderRadius: radius.pill, paddingHorizontal: 22, paddingVertical: 12 },
