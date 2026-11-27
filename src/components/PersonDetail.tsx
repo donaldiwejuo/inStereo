@@ -24,9 +24,9 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { confirmAction } from '../lib/confirm';
 import { Member } from '../context/MembersContext';
-import { ChatMessage, chatIdFor, deleteMessage, editMessage, labelConnection, sendMessage, setConnectionNickname, watchMessages } from '../lib/firestore';
+import { ChatMessage, chatIdFor, deleteMessage, editMessage, labelConnection, markMessaged, sendMessage, setConnectionNickname, setConnectionPhoto, watchMessages } from '../lib/firestore';
 import { getSafetyFeed, SafetyItem, Severity } from '../lib/safety';
-import { uploadChatMedia } from '../lib/storage';
+import { uploadMedia } from '../lib/media';
 import { colors, fonts, radius, tintFor } from '../theme';
 import { currentWeekDays, WeekBars } from './pulse';
 import { Avatar } from './ui';
@@ -195,61 +195,96 @@ export function ChatTab({ member, bottomInset = 0 }: { member: Member; bottomIns
     return unsub;
   }, [chatId]);
 
-  function sendText() {
-    if (!text.trim() || !user || !chatId) return;
-    sendMessage(chatId, user.uid, { text: text.trim() });
-    setText('');
+  // Stops a recording or voice note if the chat closes mid-way.
+  const playerRef = useRef<ReturnType<typeof createAudioPlayer> | null>(null);
+  useEffect(() => () => {
+    try {
+      playerRef.current?.remove();
+      if (audioRecorder.isRecording) audioRecorder.stop().catch(() => {});
+    } catch {
+      // The recorder may already be released on unmount — nothing to stop.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function deliver(data: { text?: string; imageUrl?: string; videoUrl?: string; audioUrl?: string }) {
+    if (!user || !chatId) return;
+    await sendMessage(chatId, user.uid, data);
+    // "Last messaged" on Home — best effort, never blocks the message.
+    markMessaged(member.connectionId, user.uid).catch(() => {});
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
   }
 
-  async function pickMedia(type: 'image' | 'video') {
-    if (!user || !chatId) return;
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: type === 'image' ? ImagePicker.MediaTypeOptions.Images : ImagePicker.MediaTypeOptions.Videos,
-      allowsEditing: false, quality: 0.8,
-    });
-    if (!result.canceled && result.assets.length > 0) {
-      setUploading(true);
-      try {
-        const url = await uploadChatMedia(chatId, result.assets[0].uri, type);
-        await sendMessage(chatId, user.uid, type === 'image' ? { imageUrl: url } : { videoUrl: url });
-        setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
-      } catch {
-        Alert.alert('Error', `Could not send ${type}. Try again.`);
-      } finally {
-        setUploading(false);
-      }
+  async function sendText() {
+    const body = text.trim();
+    if (!body || !user || !chatId) return;
+    setText('');
+    try {
+      await deliver({ text: body });
+    } catch {
+      setText(body); // give it back so nothing typed is lost
+      Alert.alert('Not sent', 'Check your connection and try again.');
     }
+  }
+
+  async function uploadAndSend(uri: string, kind: 'image' | 'video' | 'audio', contentType?: string | null) {
+    if (!chatId) return;
+    setUploading(true);
+    try {
+      const url = await uploadMedia(uri, kind, { chatId, contentType });
+      await deliver(kind === 'image' ? { imageUrl: url } : kind === 'video' ? { videoUrl: url } : { audioUrl: url });
+    } catch (err) {
+      const what = kind === 'audio' ? 'voice message' : kind;
+      Alert.alert(`Could not send ${what}`, err instanceof Error ? err.message : 'Try again.');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function pickMedia(kind: 'image' | 'video') {
+    if (!user || !chatId || uploading) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: kind === 'image' ? ['images'] : ['videos'],
+      allowsEditing: false,
+      quality: 0.8,
+      videoMaxDuration: 120,
+    });
+    if (result.canceled || !result.assets.length) return;
+    const asset = result.assets[0];
+    // The picker re-encodes photos as JPEG; videos keep their own type (.mov on iPhone).
+    const contentType = kind === 'image' ? 'image/jpeg' : asset.mimeType ?? 'video/quicktime';
+    await uploadAndSend(asset.uri, kind, contentType);
   }
 
   async function startRecording() {
     try {
       const permission = await AudioModule.requestRecordingPermissionsAsync();
-      if (!permission.granted) { Alert.alert('Could not start recording'); return; }
+      if (!permission.granted) {
+        Alert.alert('Microphone is off', 'Allow microphone access for inStereo in Settings to send voice messages.');
+        return;
+      }
+      playerRef.current?.remove();
+      playerRef.current = null;
       await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
       await audioRecorder.prepareToRecordAsync();
       audioRecorder.record();
       setIsRecording(true);
-    } catch { Alert.alert('Could not start recording'); }
+    } catch {
+      Alert.alert('Could not start recording');
+    }
   }
 
   async function stopRecording() {
-    if (!user || !chatId) return;
+    setIsRecording(false);
     try {
       await audioRecorder.stop();
-      const uri = audioRecorder.uri;
-      setIsRecording(false);
-      if (uri) {
-        setUploading(true);
-        try {
-          const url = await uploadChatMedia(chatId, uri, 'audio');
-          await sendMessage(chatId, user.uid, { audioUrl: url });
-          setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
-        } finally {
-          setUploading(false);
-        }
-      }
-    } catch { Alert.alert('Error', 'Could not send voice message.'); }
+      await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
+    } catch {
+      Alert.alert('Could not finish recording');
+      return;
+    }
+    const uri = audioRecorder.uri;
+    if (uri) await uploadAndSend(uri, 'audio', 'audio/mp4');
   }
 
   function longPressMessage(item: ChatMessage) {
@@ -263,20 +298,28 @@ export function ChatTab({ member, bottomInset = 0 }: { member: Member; bottomIns
 
   function saveEdit() {
     if (!editText.trim() || !chatId || !editingId) return;
-    editMessage(chatId, editingId, editText.trim());
+    editMessage(chatId, editingId, editText.trim()).catch(() => Alert.alert('Could not save the edit'));
     setEditingId(null);
     setEditText('');
   }
 
   async function playAudio(url: string) {
     try {
+      // One voice note at a time: stop whatever was playing first.
+      playerRef.current?.remove();
       await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
       const player = createAudioPlayer(url);
+      playerRef.current = player;
       player.addListener('playbackStatusUpdate', (status) => {
-        if (status.didJustFinish) player.remove();
+        if (status.didJustFinish) {
+          player.remove();
+          if (playerRef.current === player) playerRef.current = null;
+        }
       });
       player.play();
-    } catch { Alert.alert('Could not play audio'); }
+    } catch {
+      Alert.alert('Could not play voice message');
+    }
   }
 
   function renderMessage({ item }: { item: ChatMessage }) {
@@ -328,16 +371,16 @@ export function ChatTab({ member, bottomInset = 0 }: { member: Member; bottomIns
         ListEmptyComponent={<Text style={{ color: colors.textFaint, textAlign: 'center', marginTop: 60, fontFamily: fonts.sans, fontSize: 14 }}>No messages yet</Text>}
       />
       <View style={[d.inputRow, { paddingBottom: 12 + (kbHeight ? 0 : bottomInset) }]}>
-        <TouchableOpacity onPress={() => pickMedia('image')} style={d.iconBtn} disabled={uploading}>
+        <TouchableOpacity onPress={() => pickMedia('image')} style={d.iconBtn} disabled={uploading || isRecording}>
           {uploading ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="camera-outline" size={22} color={colors.primary} />}
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => pickMedia('video')} style={d.iconBtn} disabled={uploading}>
+        <TouchableOpacity onPress={() => pickMedia('video')} style={d.iconBtn} disabled={uploading || isRecording}>
           <Ionicons name="videocam-outline" size={22} color={colors.primary} />
         </TouchableOpacity>
         <TouchableOpacity onPress={isRecording ? stopRecording : startRecording} style={[d.iconBtn, isRecording && { backgroundColor: "#F3E3E0" }]} disabled={uploading}>
           <Ionicons name={isRecording ? "stop-circle" : "mic-outline"} size={22} color={isRecording ? colors.danger : colors.primary} />
         </TouchableOpacity>
-        <TextInput style={d.chatInput} value={text} onChangeText={setText} placeholder="Message..." placeholderTextColor={colors.textFaint} returnKeyType="send" onSubmitEditing={sendText} multiline={false} />
+        <TextInput style={d.chatInput} value={text} onChangeText={setText} placeholder={isRecording ? 'Recording… tap ■ to send' : uploading ? 'Sending…' : `Message ${member.name}`} placeholderTextColor={colors.textFaint} returnKeyType="send" onSubmitEditing={sendText} multiline={false} />
         <TouchableOpacity onPress={sendText} style={d.sendBtn}>
           <Ionicons name="send" size={18} color={colors.onPrimary} />
         </TouchableOpacity>
@@ -351,7 +394,7 @@ export function ChatTab({ member, bottomInset = 0 }: { member: Member; bottomIns
       <Modal visible={!!zoomVideo} transparent animationType="fade" onRequestClose={() => setZoomVideo(null)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', alignItems: 'center' }}>
           {zoomVideo ? <ZoomVideoPlayer uri={zoomVideo} /> : null}
-          <TouchableOpacity onPress={() => setZoomVideo(null)} style={{ position: 'absolute', top: 56, right: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: colors.border, alignItems: 'center', justifyContent: 'center' }}>
+          <TouchableOpacity onPress={() => setZoomVideo(null)} style={{ position: 'absolute', top: 56, right: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' }}>
             <Ionicons name="close" size={22} color={colors.onPrimary} />
           </TouchableOpacity>
         </View>
@@ -426,6 +469,37 @@ function EditModal({
   const [nickname, setNickname] = useState(initialNickname);
   const [label, setLabel] = useState(member.relationship);
   const [saving, setSaving] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
+
+  // Your own photo for them — applied right away, separate from Save.
+  async function changePhoto() {
+    if (!user) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.8,
+    });
+    if (result.canceled || !result.assets.length) return;
+    setPhotoBusy(true);
+    try {
+      const url = await uploadMedia(result.assets[0].uri, 'photo', { contentType: 'image/jpeg' });
+      await setConnectionPhoto(member.connectionId, user.uid, url);
+    } catch (err) {
+      Alert.alert('Could not change photo', err instanceof Error ? err.message : 'Try again.');
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
+  async function resetPhoto() {
+    if (!user) return;
+    setPhotoBusy(true);
+    try {
+      await setConnectionPhoto(member.connectionId, user.uid, '');
+    } catch {
+      Alert.alert('Could not reset photo');
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
 
   useEffect(() => {
     if (!visible) return;
@@ -464,6 +538,23 @@ function EditModal({
         >
           <Text style={e.title}>Edit {member.name}</Text>
 
+          <Text style={e.label}>PHOTO</Text>
+          <View style={e.photoRow}>
+            <Avatar person={member} size={72} />
+            <View style={{ flex: 1, gap: 8 }}>
+              <TouchableOpacity style={e.photoBtn} onPress={changePhoto} disabled={photoBusy}>
+                {photoBusy
+                  ? <ActivityIndicator size="small" color={colors.primary} />
+                  : <Text style={e.photoBtnTxt}>Choose a photo</Text>}
+              </TouchableOpacity>
+              {member.hasCustomPhoto && !photoBusy && (
+                <TouchableOpacity onPress={resetPhoto}>
+                  <Text style={e.photoReset}>Use the photo they set</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
           <Text style={e.label}>NAME</Text>
           <TextInput
             style={e.input}
@@ -497,7 +588,7 @@ function EditModal({
           </ScrollView>
 
           <Text style={e.citySelected}>
-            Only you see this name and relationship.{member.profileName ? ` Leave the name blank to use the one they set ("${member.profileName}").` : ''} Their photo, city and dates come from their own profile and update here automatically when they change them.
+            Only you see this photo, name and relationship.{member.profileName ? ` Leave the name blank to use the one they set ("${member.profileName}").` : ''} Their photo, city and dates come from their own profile and update here automatically when they change them.
           </Text>
 
           {/* Actions */}
@@ -899,6 +990,13 @@ const d = StyleSheet.create({
 // ─── Edit modal styles ────────────────────────────────────────────────────────
 
 const e = StyleSheet.create({
+  photoRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 20 },
+  photoBtn: {
+    alignSelf: 'flex-start', borderRadius: radius.pill, paddingHorizontal: 16, paddingVertical: 9,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, minWidth: 140, alignItems: 'center',
+  },
+  photoBtnTxt: { fontFamily: fonts.sansSemiBold, fontSize: 14, color: colors.text },
+  photoReset: { fontFamily: fonts.sans, fontSize: 13, color: colors.textMuted, textDecorationLine: 'underline' },
   title: { fontSize: 30, fontFamily: fonts.serif, color: colors.text, marginBottom: 24, letterSpacing: -0.5 },
   label: {
     fontSize: 11,

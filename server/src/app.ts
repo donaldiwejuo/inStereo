@@ -1,5 +1,6 @@
 import express, { type ErrorRequestHandler } from "express";
 import { pool } from "./db.js";
+import { mediaRouter } from "./routes/media.js";
 
 // Built separately from index.ts (which listens on a port) so tests can
 // exercise the app directly without starting a real server.
@@ -18,6 +19,8 @@ export function createApp() {
       res.status(503).json({ status: "degraded", db: "unreachable" });
     }
   });
+
+  app.use("/media", mediaRouter);
 
   app.use((_req, res) => {
     res.status(404).json({ error: "not_found" });

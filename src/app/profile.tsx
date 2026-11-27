@@ -6,7 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import { Member, useMembers } from "../context/MembersContext";
 import { updateUserProfile, watchUserProfile } from "../lib/firestore";
 import { describePlace, Place, searchPlaces } from "../lib/geocode";
-import { uploadProfilePhoto } from "../lib/storage";
+import { uploadMedia } from "../lib/media";
 import {
   ActivityIndicator,
   Alert,
@@ -195,7 +195,7 @@ export default function ProfileScreen() {
     }
     setSaving(true);
     try {
-      const uploadedUrl = pickedLocalUri ? await uploadProfilePhoto(user.uid, pickedLocalUri) : photoUrl;
+      const uploadedUrl = pickedLocalUri ? await uploadMedia(pickedLocalUri, "photo") : photoUrl;
       await updateUserProfile(user.uid, {
         name: name.trim(),
         photoUrl: uploadedUrl,
@@ -210,6 +210,7 @@ export default function ProfileScreen() {
           timezone: place.timezone,
           lat: place.lat,
           lon: place.lon,
+          locationUpdatedAt: 0, // picked by hand, not detected automatically
         }),
         birthday,
         phone: phone.trim(),

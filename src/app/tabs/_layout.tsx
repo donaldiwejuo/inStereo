@@ -4,7 +4,10 @@ import { ComponentProps, useEffect, useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
+import { useMembers } from "../../context/MembersContext";
+import { useConnectionAlerts } from "../../lib/connectionAlerts";
 import { UserProfile, watchConnections, watchUserProfile } from "../../lib/firestore";
+import { useLiveLocation } from "../../lib/liveLocation";
 import { colors, fonts, radius } from "../../theme";
 
 // expo-router vendors its own BottomTabBarProps type (not publicly exported) that's
@@ -118,6 +121,12 @@ function Header() {
 }
 
 export default function TabLayout() {
+  const { user } = useAuth();
+  const { members } = useMembers();
+  // Both run for as long as you're signed in and inside the app.
+  useLiveLocation(user?.uid);
+  useConnectionAlerts(members);
+
   return (
     <Tabs
       tabBar={(props) => <TabBar {...props} />}

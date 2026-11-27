@@ -17,6 +17,11 @@ function localTime(tz: string | undefined, now: Date): string {
   }
 }
 
+// " · Updated automatically" when their phone detected the city itself.
+function liveLabel(updatedAt: number | undefined, _now: Date): string {
+  return updatedAt ? " · Updated automatically" : "";
+}
+
 // ─── Flat-map fallback (used when globe.gl CDN is unreachable) ──────────────
 
 type Cluster = { city: string; lat: number; lon: number; members: Member[] };
@@ -235,7 +240,8 @@ export default function WorldScreen() {
   // reloads when someone's pin actually moves or is relabeled — not on every
   // snapshot, e.g. a pulse score update, which would reset the user's spin.
   const pinsJson = JSON.stringify(
-    members.map((m) => ({ id: m.id, name: m.name, city: m.city, lat: m.lat, lon: m.lon, photo: m.photoUri ?? "" }))
+    // Rounded so the globe only reloads when someone actually changes city.
+    members.map((m) => ({ id: m.id, name: m.name, city: m.city, lat: +m.lat.toFixed(2), lon: +m.lon.toFixed(2), photo: m.photoUri ?? "" }))
   ).replace(/</g, "\\u003c"); // keep data from closing the <script> tag
   const html = useMemo(() => GLOBE_HTML_TEMPLATE.replace("__MEMBERS_DATA__", pinsJson), [pinsJson]);
 
@@ -294,7 +300,10 @@ export default function WorldScreen() {
               <Avatar person={m} size={40} />
               <View style={{ flex: 1 }}>
                 <Text style={s.rowName} numberOfLines={1}>{m.name}</Text>
-                <Text style={type.caption} numberOfLines={1}>{[m.city, m.country].filter(Boolean).join(", ")}</Text>
+                <Text style={type.caption} numberOfLines={1}>
+                  {[m.city, m.country].filter(Boolean).join(", ")}
+                  {liveLabel(m.locationUpdatedAt, now)}
+                </Text>
               </View>
               <Text style={s.rowTime}>{localTime(m.timezone, now)}</Text>
             </TouchableOpacity>

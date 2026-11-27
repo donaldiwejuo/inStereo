@@ -34,7 +34,7 @@ npm run dev                   # http://localhost:3000/health
 - `src/app/` — screens (expo-router file-based routes)
 - `src/context/` — auth state and the connected-members list
 - `src/lib/` — Firestore, Storage, notifications, helpers
-- `firestore.rules`, `storage.rules` — security rules (pasted into the Firebase Console by hand)
+- `firestore.rules` — Firestore security rules (pasted into the Firebase Console by hand). Photos, videos and voice notes go to Cloudflare R2 through the server (`server/src/routes/media.ts`)
 - `server/` — the API: Express app (`src/app.ts`), Postgres pool (`src/db.ts`),
   migration runner (`src/migrate.ts`) and numbered SQL migrations (`migrations/`)
 - `docker-compose.yml` — local Postgres for development

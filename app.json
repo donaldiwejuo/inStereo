@@ -69,7 +69,13 @@
           "microphonePermission": "inStereo uses your microphone to record voice notes for your connections."
         }
       ],
-      "expo-video"
+      "expo-video",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "inStereo uses your location to keep your city up to date for the people you're connected to. Only your city is shared, never your exact location."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

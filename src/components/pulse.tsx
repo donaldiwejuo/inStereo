@@ -37,9 +37,9 @@ export function weekStats(scores: MoodMap | undefined) {
   const days = currentWeekDays();
   const logged = days.map((d) => scores?.[d]).filter((v): v is number => typeof v === "number");
   const avg = logged.length ? logged.reduce((a, b) => a + b, 0) / logged.length : null;
-  const latest = [...days].reverse().map((d) => scores?.[d]).find((v) => typeof v === "number");
-  // Gently flag someone whose week is trending low, or whose latest check-in was low.
-  const needsCare = (avg !== null && avg <= 2.5) || (latest !== undefined && latest <= 2);
+  // Flag anyone whose week is averaging below "Okay" (3), once they've
+  // checked in at least twice — one rough day alone isn't a pattern.
+  const needsCare = avg !== null && avg < 3 && logged.length >= 2;
   return { days, logged: logged.length, avg, needsCare };
 }
 

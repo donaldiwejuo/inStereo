@@ -41,7 +41,7 @@ function PersonPulse({ member }: { member: Member }) {
       {needsCare && (
         <View style={p.careRow}>
           <Ionicons name="heart-outline" size={15} color={colors.warm} />
-          <Text style={p.careText}>Their week has been tough. Maybe check in?</Text>
+          <Text style={p.careText}>Averaging below 3 this week. Maybe check in?</Text>
         </View>
       )}
       {member.weeklyNote ? <Text style={p.note} numberOfLines={3}>“{member.weeklyNote}”</Text> : null}
@@ -138,8 +138,13 @@ export default function PulseScreen() {
 
   const mine = weekStats(moodMap);
   const dayName = selectedDay === today ? "today" : `on ${DAY_NAMES[currentWeekDays().indexOf(selectedDay)] ?? "that day"}`;
-  // People who may need care come first.
-  const sorted = [...members].sort((a, b) => Number(weekStats(b.pulseScores).needsCare) - Number(weekStats(a.pulseScores).needsCare));
+  // Lowest weekly average first, so whoever is having the hardest week is on
+  // top; people with no check-ins yet go last.
+  const sorted = [...members].sort((a, b) => {
+    const x = weekStats(a.pulseScores).avg ?? Infinity;
+    const y = weekStats(b.pulseScores).avg ?? Infinity;
+    return x - y;
+  });
 
   return (
     <View style={s.root}>
@@ -186,6 +191,7 @@ export default function PulseScreen() {
 
           <View style={s.sectionHeader}>
             <Text style={type.sectionTitle}>Your people this week</Text>
+            <Text style={[type.caption, { marginTop: 4 }]}>Weekly averages, lowest first.</Text>
           </View>
           {sorted.length === 0 ? (
             <Text style={type.caption}>When you connect with someone, their weekly check-ins show up here.</Text>

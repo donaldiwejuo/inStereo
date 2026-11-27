@@ -26,6 +26,20 @@ function weatherCodeInfo(code: number): { icon: IconName; label: string; severe:
   return { icon: "partly-sunny-outline", label: "", severe: false };
 }
 
+// "You messaged 3 days ago" — a gentle nudge when it's been a while.
+function lastMessagedLabel(at: Date | undefined, now: Date): string {
+  if (!at) return "You haven't messaged yet";
+  const mins = Math.floor((now.getTime() - at.getTime()) / 60_000);
+  if (mins < 1) return "You messaged just now";
+  if (mins < 60) return `You messaged ${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `You messaged ${hours} ${hours === 1 ? "hour" : "hours"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "You messaged yesterday";
+  if (days < 30) return `You messaged ${days} days ago`;
+  return `You messaged on ${at.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+}
+
 function greeting(now: Date): string {
   const h = now.getHours();
   if (h < 5) return "Good evening";
@@ -91,7 +105,7 @@ function PersonCard({ member, now, onPress }: { member: Member; now: Date; onPre
       onPress={onPress}
       activeOpacity={0.85}
       accessibilityRole="button"
-      accessibilityLabel={`${member.name}, ${clock} ${ampm} in ${member.city}. ${status.label}`}
+      accessibilityLabel={`${member.name}, ${clock} ${ampm} in ${member.city}. ${status.label}. ${lastMessagedLabel(member.lastMessagedAt, now)}`}
     >
       <View style={s.cardTop}>
         <Avatar person={member} size={52} ring />
@@ -124,7 +138,10 @@ function PersonCard({ member, now, onPress }: { member: Member; now: Date; onPre
         <View style={[s.dotHalo, { backgroundColor: status.dot + "33" }]}>
           <View style={[s.dot, { backgroundColor: status.dot }]} />
         </View>
-        <Text style={s.status}>{status.label}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={s.status}>{status.label}</Text>
+          <Text style={s.lastMessaged}>{lastMessagedLabel(member.lastMessagedAt, now)}</Text>
+        </View>
         <Ionicons name="arrow-forward" size={20} color={colors.textMuted} />
       </View>
     </TouchableOpacity>
@@ -178,7 +195,7 @@ export default function HomeScreen() {
         <Text style={[type.display, s.greeting]}>
           {greeting(now)}{firstName ? `, ${firstName}` : ""}.
         </Text>
-        <Text style={[type.subtitle, s.subtitle]}>Here's a quiet look at the people you care about.</Text>
+        <Text style={[type.subtitle, s.subtitle]}>Everyone is better in stereo.</Text>
 
         <View style={s.sectionHeader}>
           <Text style={type.sectionTitle}>Your people</Text>
@@ -237,10 +254,11 @@ const s = StyleSheet.create({
   place: { fontFamily: fonts.sans, fontSize: 14, color: colors.textMuted, flexShrink: 1 },
   severe: { fontFamily: fonts.sansSemiBold, fontSize: 14, color: colors.warm },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border, marginVertical: 16 },
-  statusRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  dotHalo: { width: 16, height: 16, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  statusRow: { flexDirection: "row", alignItems: "center", gap: 10 }, // dot sits beside the two-line status
+  dotHalo: { width: 16, height: 16, borderRadius: 8, alignItems: "center", justifyContent: "center", alignSelf: "flex-start", marginTop: 2 },
   dot: { width: 8, height: 8, borderRadius: 4 },
-  status: { flex: 1, fontFamily: fonts.sansSemiBold, fontSize: 15, color: colors.text },
+  status: { fontFamily: fonts.sansSemiBold, fontSize: 15, color: colors.text },
+  lastMessaged: { fontFamily: fonts.sans, fontSize: 13, color: colors.textMuted, marginTop: 2 },
   empty: { alignItems: "center", gap: 12, paddingVertical: 40, paddingHorizontal: 20 },
   emptyTitle: { fontFamily: fonts.serif, fontSize: 24, color: colors.text },
   emptyBtn: { marginTop: 8, backgroundColor: colors.primary, borderRadius: radius.pill, paddingHorizontal: 22, paddingVertical: 12 },

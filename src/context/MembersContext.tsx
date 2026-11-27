@@ -19,6 +19,7 @@ export type Member = {
   profileName: string; // the name they set on their own profile
   relationship: string; // the label the signed-in user gave this person
   photoUri?: string;
+  hasCustomPhoto?: boolean; // true when photoUri is one you picked for them
   city: string;
   region?: string; // state / province, e.g. "North Carolina"
   country: string; // full name, e.g. "United States"
@@ -37,6 +38,8 @@ export type Member = {
   weeklyNote?: string;
   calendarVisibility?: CalendarVisibility;
   calendarEvents?: SharedCalendarEvent[];
+  lastMessagedAt?: Date; // when the signed-in user last messaged them
+  locationUpdatedAt?: number; // set when their city was detected automatically by their phone
 };
 
 function uidToNum(uid: string): number {
@@ -53,7 +56,9 @@ function profileToMember(profile: ProfileSnapshot, connection: Connection, myUid
     name: connection.nicknames?.[myUid] || profile.name,
     profileName: profile.name,
     relationship: connection.labels?.[myUid] ?? "Connection",
-    photoUri: profile.photoUrl ?? undefined,
+    // A photo you picked for them wins over the one on their own profile.
+    photoUri: connection.photos?.[myUid] || profile.photoUrl || undefined,
+    hasCustomPhoto: !!connection.photos?.[myUid],
     city: profile.city,
     region: profile.region || undefined,
     country: profile.country,
@@ -72,6 +77,8 @@ function profileToMember(profile: ProfileSnapshot, connection: Connection, myUid
     weeklyNote: profile.weeklyNote ?? "",
     calendarVisibility: profile.calendarVisibility ?? "full",
     calendarEvents: profile.calendarEvents ?? [],
+    lastMessagedAt: connection.lastMessagedAt?.[myUid]?.toDate?.() ?? undefined,
+    locationUpdatedAt: profile.locationUpdatedAt,
   };
 }
 

@@ -92,3 +92,21 @@ export async function notifyBirthday(member: Member, type: 'birthday' | 'anniver
   const trimmed = new Set(Array.from(seen).slice(-200));
   await markSeen(trimmed);
 }
+
+// Sends a local notification at most once per `key` (e.g. once per person
+// per week), honouring the Notifications switch in Settings.
+export async function notifyOnce(key: string, title: string, body: string, data: Record<string, unknown> = {}) {
+  const settingsRaw = await AsyncStorage.getItem('instereo_settings');
+  if (settingsRaw) {
+    try {
+      if (JSON.parse(settingsRaw).notificationsEnabled === false) return;
+    } catch {}
+  }
+  const seen = await getSeen();
+  if (seen.has(key)) return;
+  const granted = await requestNotificationPermission();
+  if (!granted) return;
+  await Notifications.scheduleNotificationAsync({ content: { title, body, data }, trigger: null });
+  seen.add(key);
+  await markSeen(new Set(Array.from(seen).slice(-200)));
+}

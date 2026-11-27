@@ -14,9 +14,11 @@ import {
   View,
 } from "react-native";
 
+import { announceLiveLocationSetting } from "../lib/liveLocation";
 import { colors, fonts } from "../theme";
 type Settings = {
   notificationsEnabled: boolean;
+  shareLiveLocation: boolean;
   accentColor: string;
   quietStart: number;
   quietEnd: number;
@@ -26,6 +28,7 @@ type Settings = {
 
 const DEFAULT_SETTINGS: Settings = {
   notificationsEnabled: true,
+  shareLiveLocation: true,
   accentColor: colors.primary,
   quietStart: 22,
   quietEnd: 7,
@@ -137,6 +140,19 @@ export default function SettingsScreen() {
             <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
           </TouchableOpacity>
 
+          <View style={styles.row}>
+            <Ionicons name="navigate-outline" size={20} color={accent} />
+            <Text style={styles.rowLabel}>Update my city automatically</Text>
+            <Switch
+              value={settings.shareLiveLocation}
+              onValueChange={(on) => {
+                update({ shareLiveLocation: on });
+                announceLiveLocationSetting(on);
+              }}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={colors.onPrimary}
+            />
+          </View>
 
           <TouchableOpacity style={[styles.row, styles.rowLast]} onPress={() => setQuietModal(true)}>
             <Ionicons name="time-outline" size={20} color={accent} />

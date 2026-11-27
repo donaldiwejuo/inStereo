@@ -64,6 +64,7 @@ export type UserProfile = {
   // Same visibility level applied to every connection — not per-connection.
   calendarVisibility: CalendarVisibility;
   calendarEvents: SharedCalendarEvent[]; // already redacted per calendarVisibility before being stored
+  locationUpdatedAt?: number; // ms epoch of the last automatic (GPS-detected) city change; absent if never
   onboardingComplete: boolean;
   createdAt: any;
 };
@@ -95,12 +96,13 @@ export type ProfileSnapshot = {
   weeklyNote: string;
   calendarVisibility: CalendarVisibility;
   calendarEvents: SharedCalendarEvent[];
+  locationUpdatedAt?: number;
 };
 
 const SNAPSHOT_FIELDS: Array<keyof ProfileSnapshot> = [
   "name", "photoUrl", "bio", "city", "region", "country", "countryCode", "timezone", "lat", "lon", "wakeHour", "sleepHour",
   "birthday", "anniversary", "hometown", "occupation", "importantDates", "pulseScores", "weeklyNote",
-  "calendarVisibility", "calendarEvents",
+  "calendarVisibility", "calendarEvents", "locationUpdatedAt",
 ];
 
 export function toProfileSnapshot(profile: UserProfile): ProfileSnapshot {
@@ -127,6 +129,7 @@ export function toProfileSnapshot(profile: UserProfile): ProfileSnapshot {
     weeklyNote: profile.weeklyNote ?? "",
     calendarVisibility: profile.calendarVisibility ?? "full",
     calendarEvents: profile.calendarEvents ?? [],
+    ...(profile.locationUpdatedAt ? { locationUpdatedAt: profile.locationUpdatedAt } : {}),
   };
 }
 
@@ -148,6 +151,8 @@ export type Connection = {
   acceptorUid: string;
   labels: Record<string, string>; // uid → label they gave the other person
   nicknames?: Record<string, string>; // uid → private display name they gave the other person
+  photos?: Record<string, string>; // uid → private photo URL they chose for the other person
+  lastMessagedAt?: Record<string, any>; // uid → when they last sent the other person a chat message
   profiles: Record<string, ProfileSnapshot>; // uid → their profile snapshot, kept fresh by updateUserProfile
   createdAt: any;
   acceptedAt?: any;
@@ -315,6 +320,22 @@ export async function setConnectionNickname(
   const trimmed = nickname.trim();
   await updateDoc(doc(db, "connections", connectionId), {
     [`nicknames.${uid}`]: trimmed ? trimmed : deleteField(),
+  });
+}
+
+// A photo `uid` picked for the other person, seen only by `uid`. Empty
+// string clears it, falling back to the photo on their own profile.
+export async function setConnectionPhoto(connectionId: string, uid: string, url: string): Promise<void> {
+  await updateDoc(doc(db, "connections", connectionId), {
+    [`photos.${uid}`]: url ? url : deleteField(),
+  });
+}
+
+// Stamped each time `uid` sends a chat message, so Home can show
+// "You last messaged them 3 days ago" without querying every chat.
+export async function markMessaged(connectionId: string, uid: string): Promise<void> {
+  await updateDoc(doc(db, "connections", connectionId), {
+    [`lastMessagedAt.${uid}`]: serverTimestamp(),
   });
 }
 
