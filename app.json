@@ -17,7 +17,7 @@
     "android": {
       "package": "app.instereo",
       "adaptiveIcon": {
-        "backgroundColor": "#07080f",
+        "backgroundColor": "#23282A",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
