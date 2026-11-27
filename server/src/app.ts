@@ -1,5 +1,6 @@
 import express, { type ErrorRequestHandler } from "express";
 import { pool } from "./db.js";
+import { inviteRouter } from "./routes/invite.js";
 import { mediaRouter } from "./routes/media.js";
 
 // Built separately from index.ts (which listens on a port) so tests can
@@ -21,6 +22,7 @@ export function createApp() {
   });
 
   app.use("/media", mediaRouter);
+  app.use("/invite", inviteRouter);
 
   app.use((_req, res) => {
     res.status(404).json({ error: "not_found" });

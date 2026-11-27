@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -18,6 +17,7 @@ import {
   View,
 } from "react-native";
 import { useAuth } from "../context/AuthContext";
+import { API_URL } from "../lib/media";
 import {
   Connection,
   createInvite,
@@ -155,7 +155,9 @@ export default function ConnectionsScreen() {
       const profile = await getUserProfile(user.uid);
       if (!profile) { notify("Error", "Could not load your profile."); return; }
       const inviteId = await createInvite(user.uid, toProfileSnapshot(profile));
-      const url = Linking.createURL(`invite/${inviteId}`);
+      // A normal https link opens anywhere (WhatsApp, iMessage, email) and its
+      // page hands off to the app — instereo:// links only work if it's installed.
+      const url = `${API_URL}/invite/${inviteId}`;
       if (Platform.OS === "web") {
         setCopied(false);
         setInviteUrl(url);
